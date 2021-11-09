@@ -3,7 +3,6 @@
  *)
 
  #use "pc.ml";;
- open PC;;
  
  let rec gcd a b =
    match (a, b) with
