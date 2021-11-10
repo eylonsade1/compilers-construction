@@ -47,7 +47,13 @@
    let nt2 = unitify nt_end_of_input in
    let nt1 = disj nt1 nt2 in
    nt1 str
- and nt_line_comment str = raise X_not_yet_implemented
+ and nt_line_comment str =
+   let nt_semicolon = unitify (char ';') in
+   let nt_all_chars = range ' ' '~' in
+   let nt_star_all_chars = unitify (star nt_all_chars) in
+   let comment = caten (caten nt_semicolon nt_star_all_chars) nt_end_of_line_or_file in 
+   let packed = pack comment (fun ((a,b),c) -> b) in
+   packed str
  and nt_paired_comment str = raise X_not_yet_implemented
  and nt_sexpr_comment str = raise X_not_yet_implemented
  and nt_comment str =
@@ -63,7 +69,13 @@
    let nt1 = caten nt_skip_star (caten nt nt_skip_star) in
    let nt1 = pack nt1 (fun (_, (e, _)) -> e) in
    nt1
- and nt_int str = raise X_not_yet_implemented
+ and nt_int str = 
+   let plus = char '+' in
+   let minus = char '-' in
+   let nt_signs = disj plus minus in
+   let nt1 = caten (maybe nt_signs) nt_natural in
+   let packed = pack nt1 (fun (s,n) -> n) in
+   packed str
  and nt_frac str = raise X_not_yet_implemented
  and nt_integer_part str = raise X_not_yet_implemented
  and nt_mantissa str = raise X_not_yet_implemented
@@ -84,7 +96,7 @@
    let nt1 = pack nt1 (fun r -> ScmBoolean r) in
    let nt1 = not_followed_by nt1 nt_symbol in
    nt1 str
- and nt_char_simple str = raise X_not_yet_implemented
+ and nt_char_simple str = range '!' '~'
  and make_named_char char_name ch = raise X_not_yet_implemented
  and nt_char_named str =
    let nt1 =
