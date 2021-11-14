@@ -74,7 +74,12 @@
    let minus = char '-' in
    let nt_signs = disj plus minus in
    let nt1 = caten (maybe nt_signs) nt_natural in
-   let packed = pack nt1 (fun (s,n) -> n) in
+   let packed = pack nt1 (fun (s,n) ->
+   (*edited*)
+    match s with
+   None -> n
+   |Some('+') -> n
+   |Some('-') -> n*(-1) ) in
    packed str
  and nt_frac str = raise X_not_yet_implemented
  and nt_integer_part str = raise X_not_yet_implemented
