@@ -75,17 +75,68 @@
    let nt_signs = disj plus minus in
    let nt1 = caten (maybe nt_signs) nt_natural in
    let packed = pack nt1 (fun (s,n) ->
-   (*edited*)
-    match s with
+   match s with
    None -> n
    |Some('+') -> n
-   |Some('-') -> n*(-1) ) in
+   |Some('-') -> n*(-1)
+   | _ -> n ) in (*check what to return*)
    packed str
- and nt_frac str = raise X_not_yet_implemented
- and nt_integer_part str = raise X_not_yet_implemented
- and nt_mantissa str = raise X_not_yet_implemented
- and nt_exponent str = raise X_not_yet_implemented
- and nt_float str = raise X_not_yet_implemented
+ and nt_frac str = 
+   let nt_slesh = char '/' in
+   let nt1 = caten nt_int (caten nt_slesh nt_natural) in
+   let packed = pack nt1 (fun (i, (s, n)) -> ScmRational(i/n,1)) in
+   packed str
+ and nt_integer_part str = 
+   let nt1 = plus nt_digit in
+   let packed = pack nt1 (fun s -> int_of_string(list_to_string s)) in
+   packed str
+ and nt_mantissa str = 
+   let nt1 = plus nt_digit in
+   let packed = pack nt1 (fun s -> int_of_string(list_to_string s)) in
+   packed str
+ and nt_exponent str = 
+   let exponent_token = disj (word_ci "e") (disj (word "*10^") (word "*10**")) in
+   let nt1 = caten exponent_token nt_int in
+   let packed = pack nt1 (fun (t,i) -> ourPower 10 i) in
+   packed str
+ and nt_float_A str = raise X_not_yet_implemented
+  (* let nt_dot = char '.' in
+   let nt1 = caten nt_integer_part nt_dot in
+   let nt2 = caten nt1 (maybe nt_mantissa) in
+   let nt3 = caten nt2 (maybe nt_exponent) in
+   let packed = pack nt3 (fun (((i, d), m), e) -> 
+   match m, e with
+   None, None -> float_of_int i 
+   |_, None -> string_of_float((string_of_int i)^"."^(string_of_int m)) 
+   |None, _ -> float_of_int(i *. e) 
+   |_, _ -> string_of_float((string_of_int i)^"."^(string_of_int m)) *. e ) in
+   packed str*)
+ and nt_float_B str = raise X_not_yet_implemented
+   (*let nt_dot = char '.' in
+   let nt1 = caten nt_dot nt_mantissa in
+   let nt2 = caten nt1 (maybe nt_exponent) in
+   let packed = pack nt2 (fun ((d, m), e) -> 
+   match e with
+   None -> float_of_string("0."^(string_of_int m))
+   |_ -> (float_of_string("0."^(string_of_int m))) *. e) in
+   packed str*)
+ and nt_float_C str = 
+   let nt1 = caten nt_integer_part nt_mantissa in
+   let packed = pack nt1 (fun (i, m) -> float_of_string((string_of_int i)^(string_of_int m))) in
+   packed str
+ and nt_float str = 
+   let plus = char '+' in
+   let minus = char '-' in
+   let nt_signs = disj plus minus in
+   let nt_floats = disj nt_float_A (disj nt_float_B nt_float_C) in 
+   let nt1 = caten (maybe nt_signs) nt_floats in 
+   let packed = pack nt1 (fun (s,f) ->
+   match s with
+   None -> ScmReal f
+   |Some('+') -> ScmReal f
+   |Some('-') -> ScmReal(f*.(-1.0))
+   | _ -> ScmReal f ) in (*check what to return*) 
+   packed str
  and nt_number str =
    let nt1 = nt_float in
    let nt2 = nt_frac in
