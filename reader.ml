@@ -78,7 +78,7 @@
    None -> n
    |Some('+') -> n
    |Some('-') -> n*(-1)
-   | _ -> n ) in (*check what to return*)
+   | _ -> raise X_no_match ) in
    packed str
  and nt_frac str = 
    let nt_slesh = char '/' in
@@ -98,27 +98,27 @@
    let nt1 = caten exponent_token nt_int in
    let packed = pack nt1 (fun (t,i) -> ourPower 10 i) in
    packed str
- and nt_float_A str = raise X_not_yet_implemented
-  (* let nt_dot = char '.' in
+ and nt_float_A str = 
+   let nt_dot = char '.' in
    let nt1 = caten nt_integer_part nt_dot in
    let nt2 = caten nt1 (maybe nt_mantissa) in
    let nt3 = caten nt2 (maybe nt_exponent) in
    let packed = pack nt3 (fun (((i, d), m), e) -> 
    match m, e with
    None, None -> float_of_int i 
-   |_, None -> string_of_float((string_of_int i)^"."^(string_of_int m)) 
-   |None, _ -> float_of_int(i *. e) 
-   |_, _ -> string_of_float((string_of_int i)^"."^(string_of_int m)) *. e ) in
-   packed str*)
- and nt_float_B str = raise X_not_yet_implemented
-   (*let nt_dot = char '.' in
+   |Some(any1), None -> float_of_string((string_of_int i)^"."^(string_of_int any1)) 
+   |None, Some(any2) -> float_of_int(i * any2) 
+   |Some(any3), Some(any4) -> float_of_string((string_of_int i)^"."^(string_of_int any3)) *. float_of_int(any4) ) in
+   packed str
+ and nt_float_B str = 
+   let nt_dot = char '.' in
    let nt1 = caten nt_dot nt_mantissa in
    let nt2 = caten nt1 (maybe nt_exponent) in
    let packed = pack nt2 (fun ((d, m), e) -> 
    match e with
    None -> float_of_string("0."^(string_of_int m))
-   |_ -> (float_of_string("0."^(string_of_int m))) *. e) in
-   packed str*)
+   |Some(exp) -> (float_of_string("0."^(string_of_int m))) *. float_of_int(exp)) in
+   packed str
  and nt_float_C str = 
    let nt1 = caten nt_integer_part nt_mantissa in
    let packed = pack nt1 (fun (i, m) -> float_of_string((string_of_int i)^(string_of_int m))) in
@@ -134,7 +134,7 @@
    None -> ScmReal f
    |Some('+') -> ScmReal f
    |Some('-') -> ScmReal(f*.(-1.0))
-   | _ -> ScmReal f ) in (*check what to return*) 
+   | _ -> raise X_no_match ) in
    packed str
  and nt_number str =
    let nt1 = nt_float in
@@ -150,9 +150,12 @@
    let nt1 = disj nt1 nt2 in
    let nt1 = pack nt1 (fun r -> ScmBoolean r) in
    nt1 str
- and nt_char_simple str = range '!' '~'
- and make_named_char char_name ch = raise X_not_yet_implemented
-   (*what we need to do*)
+ and nt_char_simple str = 
+   let nt1 = range '!' '~' in
+   nt1 str
+ and make_named_char char_name ch =   
+   let nt1 = pack (word char_name) (fun _ -> ch) in
+   nt1
  and nt_char_named str =
    let nt1 =
      disj_list [(make_named_char "newline" '\n');
@@ -161,16 +164,65 @@
                 (make_named_char "space" ' ');
                 (make_named_char "tab" '\t')] in
    nt1 str
-   (**)
- and nt_char_hex str = raise X_not_yet_implemented
- and nt_char str = raise X_not_yet_implemented
- and nt_symbol_char str = raise X_not_yet_implemented
+ and nt_char_hex str = 
+   let chars = range 'a' 'f' in
+   let nt1 = disj nt_digit chars in
+   nt1 str
+ and nt_hexa str =
+  let hex_char =  caten (char 'x') (plus nt_char_hex) in
+  let hex_packed = pack hex_char (fun (c,l) -> char_of_int(int_of_string("0x"^(list_to_string l)))) in
+  hex_packed str
+ and nt_char str = 
+   let char_pref = word "#\\" in
+   let nt1 = disj nt_char_simple nt_char_named in
+   let nt1 = disj nt1 nt_hexa in
+   let nt1 = caten char_pref nt1 in
+   let packed = pack nt1 (fun (pref,c) -> ScmChar c) in
+   packed str
+ and nt_symbol_char str = 
+    let nt1 = range 'a' 'z' in
+    let nt2 = disj nt1 (range 'A' 'Z') in
+    let nt3 = disj nt2 (char '!') in
+    let nt4 = disj nt3 (char '$') in
+    let nt4 = disj nt4 (char '^') in
+    let nt4 = disj nt4 (char '*') in
+    let nt4 = disj nt4 (char '-') in
+    let nt4 = disj nt4 (char '_') in
+    let nt4 = disj nt4 (char '=') in
+    let nt4 = disj nt4 (char '+') in
+    let nt4 = disj nt4 (char '<') in
+    let nt4 = disj nt4 (char '>') in
+    let nt4 = disj nt4 (char '?') in
+    let nt4 = disj nt4 (char '/') in
+    let nt4 = disj nt4 (char ':') in
+    nt4 str
  and nt_symbol str =
    let nt1 = plus nt_symbol_char in
    let nt1 = pack nt1 list_to_string in
    let nt1 = pack nt1 (fun name -> ScmSymbol name) in
    let nt1 = diff nt1 nt_number in
    nt1 str
+ and nt_string_lital str =
+   let nt1 = range '!' '}' in
+   let nt1 = diff nt1 (char '\\') in
+   let nt1 = diff nt1 (char '\"') in
+   nt1 str
+ and nt_string_interpolated str = raise X_not_yet_implemented
+ and nt_string_meta str =
+   let nt1 = word "\\\\" in
+   let nt1 = disj nt1 (word "\\\"") in
+   let nt1 = disj nt1 (word "\\t") in
+   let nt1 = disj nt1 (word "\\f") in
+   let nt1 = disj nt1 (word "\\n") in
+   let nt1 = disj nt1 (word "\\r") in
+   let nt1 = disj nt1 (word "--") in
+   nt1 str
+ and nt_string_hex_char str =
+   let nt1 = word "/x" in
+   let nt2 = caten nt1 (plus nt_char_hex) in
+   let nt2 = caten nt2 (word ";") in
+   let packed = pack nt2 (fun ((bx,chex),semic) ->char_of_int(int_of_string("0x"^(list_to_string chex)))) in
+   packed str
  and nt_string str = raise X_not_yet_implemented
  and nt_vector str =
    let nt1 = word "#(" in
@@ -185,6 +237,10 @@
    let nt1 = pack nt1 (fun (_, sexpr) -> sexpr) in
    nt1 str
  and nt_list str = raise X_not_yet_implemented
+ and nt_quoted str = raise X_not_yet_implemented
+ and nt_quasi_quoted str = raise X_not_yet_implemented
+ and nt_unquoted str = raise X_not_yet_implemented
+ and nt_unquoted_and_splice str = raise X_not_yet_implemented
  and nt_quoted_forms str = raise X_not_yet_implemented
  and nt_sexpr str =
    let nt1 =
