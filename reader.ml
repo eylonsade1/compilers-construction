@@ -53,13 +53,13 @@
    let comment = caten (caten nt_semicolon nt_star_all_chars) nt_end_of_line_or_file in 
    let packed = pack comment (fun ((a,b),c) -> b) in
    packed str
- and nt_paired_comment str = raise X_not_yet_implemented
- and nt_sexpr_comment str = raise X_not_yet_implemented
+ (*and nt_paired_comment str = raise X_not_yet_implemented
+ and nt_sexpr_comment str = raise X_not_yet_implemented*)
  and nt_comment str =
    disj_list
      [nt_line_comment;
-      nt_paired_comment;
-      nt_sexpr_comment] str
+      (*nt_paired_comment;
+      nt_sexpr_comment*)] str
  and nt_skip_star str =
    let nt1 = disj (unitify nt_whitespace) nt_comment in
    let nt1 = unitify (star nt1) in
@@ -80,10 +80,10 @@
    |Some('-') -> n*(-1)
    | _ -> raise X_no_match ) in
    packed str
- and nt_frac str = 
+ and nt_frac str = (*check what to do with 0*)
    let nt_slesh = char '/' in
    let nt1 = caten nt_int (caten nt_slesh nt_natural) in
-   let packed = pack nt1 (fun (i, (s, n)) -> ScmRational(i/n,1)) in
+   let packed = pack nt1 (fun (i, (s, n)) -> ScmRational((i/(gcd i n)), (n/(gcd i n)))) in
    packed str
  and nt_integer_part str = 
    let nt1 = plus nt_digit in
@@ -96,7 +96,7 @@
  and nt_exponent str = 
    let exponent_token = disj (word_ci "e") (disj (word "*10^") (word "*10**")) in
    let nt1 = caten exponent_token nt_int in
-   let packed = pack nt1 (fun (t,i) -> ourPower 10 i) in
+   let packed = pack nt1 (fun (t,i) -> ourPower 10.0 i) in
    packed str
  and nt_float_A str = 
    let nt_dot = char '.' in
@@ -107,8 +107,8 @@
    match m, e with
    None, None -> float_of_int i 
    |Some(any1), None -> float_of_string((string_of_int i)^"."^(string_of_int any1)) 
-   |None, Some(any2) -> float_of_int(i * any2) 
-   |Some(any3), Some(any4) -> float_of_string((string_of_int i)^"."^(string_of_int any3)) *. float_of_int(any4) ) in
+   |None, Some(any2) -> float_of_int(i) *. any2 
+   |Some(any3), Some(any4) -> float_of_string((string_of_int i)^"."^(string_of_int any3)) *. any4 ) in
    packed str
  and nt_float_B str = 
    let nt_dot = char '.' in
@@ -117,11 +117,11 @@
    let packed = pack nt2 (fun ((d, m), e) -> 
    match e with
    None -> float_of_string("0."^(string_of_int m))
-   |Some(exp) -> (float_of_string("0."^(string_of_int m))) *. float_of_int(exp)) in
+   |Some(exp) -> (float_of_string("0."^(string_of_int m))) *. exp) in
    packed str
  and nt_float_C str = 
-   let nt1 = caten nt_integer_part nt_mantissa in
-   let packed = pack nt1 (fun (i, m) -> float_of_string((string_of_int i)^(string_of_int m))) in
+   let nt1 = caten nt_integer_part nt_exponent in
+   let packed = pack nt1 (fun (i, e) -> (float_of_int i) *. e) in
    packed str
  and nt_float str = 
    let plus = char '+' in
@@ -174,8 +174,8 @@
   hex_packed str
  and nt_char str = 
    let char_pref = word "#\\" in
-   let nt1 = disj nt_char_simple nt_char_named in
-   let nt1 = disj nt1 nt_hexa in
+   let nt1 = disj nt_char_named nt_hexa in
+   let nt1 = disj nt1 nt_char_simple in
    let nt1 = caten char_pref nt1 in
    let packed = pack nt1 (fun (pref,c) -> ScmChar c) in
    packed str
@@ -207,7 +207,7 @@
    let nt1 = diff nt1 (char '\\') in
    let nt1 = diff nt1 (char '\"') in
    nt1 str
- and nt_string_interpolated str = raise X_not_yet_implemented
+(* and nt_string_interpolated str = raise X_not_yet_implemented*)
  and nt_string_meta str =
    let nt1 = word "\\\\" in
    let nt1 = disj nt1 (word "\\\"") in
@@ -223,7 +223,7 @@
    let nt2 = caten nt2 (word ";") in
    let packed = pack nt2 (fun ((bx,chex),semic) ->char_of_int(int_of_string("0x"^(list_to_string chex)))) in
    packed str
- and nt_string str = raise X_not_yet_implemented
+ (*and nt_string str = raise X_not_yet_implemented*)
  and nt_vector str =
    let nt1 = word "#(" in
    let nt2 = caten nt_skip_star (char ')') in
@@ -236,16 +236,16 @@
    let nt1 = caten nt1 nt2 in
    let nt1 = pack nt1 (fun (_, sexpr) -> sexpr) in
    nt1 str
- and nt_list str = raise X_not_yet_implemented
+ (*and nt_list str = raise X_not_yet_implemented
  and nt_quoted str = raise X_not_yet_implemented
  and nt_quasi_quoted str = raise X_not_yet_implemented
  and nt_unquoted str = raise X_not_yet_implemented
  and nt_unquoted_and_splice str = raise X_not_yet_implemented
- and nt_quoted_forms str = raise X_not_yet_implemented
+ and nt_quoted_forms str = raise X_not_yet_implemented*)
  and nt_sexpr str =
    let nt1 =
      disj_list [nt_number; nt_boolean; nt_char; nt_symbol;
-                nt_string; nt_vector; nt_list; nt_quoted_forms] in
+                (*nt_string;*) nt_vector;(* nt_list; nt_quoted_forms*)] in
    let nt1 = make_skipped_star nt1 in
    nt1 str;;
 (*  
