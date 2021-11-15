@@ -25,11 +25,11 @@
    | ScmVector of (sexpr list)
    | ScmPair of (sexpr * sexpr);;
  
- module type READER = sig
+ (* module type READER = sig
      val nt_sexpr : sexpr PC.parser
  end;; (* end of READER signature *)
  
- module Reader : READER = struct
+ module Reader : READER = struct *)
  open PC;;
  
  let unitify nt = pack nt (fun _ -> ());;
@@ -39,7 +39,6 @@
      pack (caten nt_digit
      (disj nt nt_epsilon)) (function (a,s) -> a::s) str in
      pack nt (fun s -> (fun a b -> 10 * a + b) 0  (int_of_string (list_to_string s)));;
- 
  let rec nt_whitespace str =
    const (fun ch -> ch <= ' ') str
  and nt_end_of_line_or_file str =
@@ -150,10 +149,10 @@
    let nt2 = pack (word_ci "#t") (fun _ -> true) in
    let nt1 = disj nt1 nt2 in
    let nt1 = pack nt1 (fun r -> ScmBoolean r) in
-   let nt1 = not_followed_by nt1 nt_symbol in
    nt1 str
  and nt_char_simple str = range '!' '~'
  and make_named_char char_name ch = raise X_not_yet_implemented
+   (*what we need to do*)
  and nt_char_named str =
    let nt1 =
      disj_list [(make_named_char "newline" '\n');
@@ -162,6 +161,7 @@
                 (make_named_char "space" ' ');
                 (make_named_char "tab" '\t')] in
    nt1 str
+   (**)
  and nt_char_hex str = raise X_not_yet_implemented
  and nt_char str = raise X_not_yet_implemented
  and nt_symbol_char str = raise X_not_yet_implemented
@@ -192,9 +192,9 @@
                 nt_string; nt_vector; nt_list; nt_quoted_forms] in
    let nt1 = make_skipped_star nt1 in
    nt1 str;;
- 
+(*  
  end;; (* end of struct Reader *)
- 
+  *)
  let rec string_of_sexpr = function
    | ScmVoid -> "#<void>"
    | ScmNil -> "()"
