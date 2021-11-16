@@ -202,28 +202,45 @@
    let nt1 = pack nt1 (fun name -> ScmSymbol name) in
    let nt1 = diff nt1 nt_number in
    nt1 str
- and nt_string_lital str =
+(* and nt_string_literal str =
    let nt1 = range '!' '}' in
    let nt1 = diff nt1 (char '\\') in
    let nt1 = diff nt1 (char '\"') in
-   nt1 str
-(* and nt_string_interpolated str = raise X_not_yet_implemented*)
+   let packed = pack nt1 (fun (c) -> ScmChar(c)) in
+   packed str
+ and nt_string_interpolated str = 
+   let nt_start = word "~{" in
+   let nt_end = word "}" in
+   let nt1 = caten nt_start (caten nt_sexpr nt_end) in
+   let packed = pack nt1 (fun (s, (sexp, e)) -> ScmPair ((ScmSymbol "format"), (ScmPair ((ScmString "~a"), sexp)))) in
+   packed str
  and nt_string_meta str =
-   let nt1 = word "\\\\" in
-   let nt1 = disj nt1 (word "\\\"") in
-   let nt1 = disj nt1 (word "\\t") in
-   let nt1 = disj nt1 (word "\\f") in
-   let nt1 = disj nt1 (word "\\n") in
-   let nt1 = disj nt1 (word "\\r") in
-   let nt1 = disj nt1 (word "--") in
-   nt1 str
+   let nt1 = char '\\' in
+   let nt1 = disj nt1 (char '\"') in
+   let nt1 = disj nt1 (char '\t') in
+   let nt1 = disj nt1 (char '\012') in
+   let nt1 = disj nt1 (char '\n') in
+   let nt1 = disj nt1 (char '\r') in
+   (*let nt1 = disj nt1 (char '~~') in*)
+   let packed = pack nt1 (fun (c) -> ScmChar(c)) in
+   packed str
  and nt_string_hex_char str =
    let nt1 = word "/x" in
    let nt2 = caten nt1 (plus nt_char_hex) in
    let nt2 = caten nt2 (word ";") in
-   let packed = pack nt2 (fun ((bx,chex),semic) ->char_of_int(int_of_string("0x"^(list_to_string chex)))) in
+   let packed = pack nt2 (fun ((bx,chex),semic) -> ScmChar(char_of_int(int_of_string("0x"^(list_to_string chex))))) in
    packed str
- (*and nt_string str = raise X_not_yet_implemented*)
+ and nt_string_char str = 
+   let nt1 = disj nt_string_hex_char nt_string_meta in
+   let nt1 = disj nt1 nt_string_interpolated in 
+   let nt1 = disj nt1 nt_string_literal in
+   nt1 str
+ and nt_string str = 
+   let nt1 = star nt_string_char in
+   let nt_geresh = word "\"" in
+   let nt1 = caten nt_geresh (caten nt1 nt_geresh) in
+   let packed = pack nt1 (fun (g1, (st, g2)) -> st) in
+   nt1 str*)
  and nt_vector str =
    let nt1 = word "#(" in
    let nt2 = caten nt_skip_star (char ')') in
