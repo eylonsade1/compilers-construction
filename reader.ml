@@ -47,19 +47,21 @@
    let nt1 = disj nt1 nt2 in
    nt1 str
  and nt_line_comment str =
-   let nt_semicolon = unitify (char ';') in
-   let nt_all_chars = range ' ' '~' in
-   let nt_star_all_chars = unitify (star nt_all_chars) in
+   let nt_semicolon = unitify(char ';') in
+   let nt_all_chars = unitify(range ' ' '~') in
+   let nt_star_all_chars = unitify(star nt_all_chars) in
    let comment = caten (caten nt_semicolon nt_star_all_chars) nt_end_of_line_or_file in 
-   let packed = pack comment (fun ((a,b),c) -> b) in
-   packed str
- (*and nt_paired_comment str = raise X_not_yet_implemented
- and nt_sexpr_comment str = raise X_not_yet_implemented*)
+   (unitify comment) str
+ (*and nt_paired_comment str = raise X_not_yet_implemented*)
+ and nt_sexpr_comment str = 
+   let nt_start = unitify(word "#;") in
+   let nt1 = caten nt_start (unitify(nt_sexpr)) in
+   (unitify nt1) str
  and nt_comment str =
    disj_list
      [nt_line_comment;
-      (*nt_paired_comment;
-      nt_sexpr_comment*)] str
+      (*nt_paired_comment;*)
+      nt_sexpr_comment] str
  and nt_skip_star str =
    let nt1 = disj (unitify nt_whitespace) nt_comment in
    let nt1 = unitify (star nt1) in
@@ -202,45 +204,49 @@
    let nt1 = pack nt1 (fun name -> ScmSymbol name) in
    let nt1 = diff nt1 nt_number in
    nt1 str
-(* and nt_string_literal str =
+ and nt_string_literal str =
    let nt1 = range '!' '}' in
    let nt1 = diff nt1 (char '\\') in
    let nt1 = diff nt1 (char '\"') in
-   let packed = pack nt1 (fun (c) -> ScmChar(c)) in
-   packed str
+   let packed = pack nt1 (fun (c) -> c) in
+   nt1 str
  and nt_string_interpolated str = 
-   let nt_start = word "~{" in
-   let nt_end = word "}" in
+   let nt_start = word "\"~{" in
+   let nt_end = word "}\"" in
    let nt1 = caten nt_start (caten nt_sexpr nt_end) in
    let packed = pack nt1 (fun (s, (sexp, e)) -> ScmPair ((ScmSymbol "format"), (ScmPair ((ScmString "~a"), sexp)))) in
    packed str
  and nt_string_meta str =
-   let nt1 = char '\\' in
-   let nt1 = disj nt1 (char '\"') in
-   let nt1 = disj nt1 (char '\t') in
-   let nt1 = disj nt1 (char '\012') in
-   let nt1 = disj nt1 (char '\n') in
-   let nt1 = disj nt1 (char '\r') in
-   (*let nt1 = disj nt1 (char '~~') in*)
-   let packed = pack nt1 (fun (c) -> ScmChar(c)) in
-   packed str
+   let nt1 = pack (word "\\\\") (fun _ -> '\\') in
+   let nt1 = disj nt1 (pack (word "\\\"") (fun _ -> '\"')) in
+   let nt1 = disj nt1 (pack (word "\\\t") (fun _ -> '\t')) in
+   let nt1 = disj nt1 (pack (word "\\\012") (fun _ -> '\012')) in
+   let nt1 = disj nt1 (pack (word "\\\n") (fun _ -> '\n')) in
+   let nt1 = disj nt1 (pack (word "\\\r") (fun _ -> '\r')) in
+   let nt1 = disj nt1 (pack (word "~~") (fun _ -> '~')) in
+   nt1 str
  and nt_string_hex_char str =
    let nt1 = word "/x" in
    let nt2 = caten nt1 (plus nt_char_hex) in
    let nt2 = caten nt2 (word ";") in
-   let packed = pack nt2 (fun ((bx,chex),semic) -> ScmChar(char_of_int(int_of_string("0x"^(list_to_string chex))))) in
+   let packed = pack nt2 (fun ((bx,chex),semic) -> char_of_int(int_of_string("0x"^(list_to_string chex)))) in
    packed str
  and nt_string_char str = 
-   let nt1 = disj nt_string_hex_char nt_string_meta in
-   let nt1 = disj nt1 nt_string_interpolated in 
-   let nt1 = disj nt1 nt_string_literal in
+   let nt1 = disj nt_string_literal nt_string_meta in
+   let nt1 = disj nt1 nt_string_hex_char in 
    nt1 str
  and nt_string str = 
    let nt1 = star nt_string_char in
    let nt_geresh = word "\"" in
    let nt1 = caten nt_geresh (caten nt1 nt_geresh) in
-   let packed = pack nt1 (fun (g1, (st, g2)) -> st) in
-   nt1 str*)
+   let packed = pack nt1 (fun (g1, (st, g2)) -> ScmString(list_to_string st)) in
+
+   let nt_start = word "\"~{" in
+   let nt_end = word "}\"" in
+   let nt1 = caten nt_start (caten nt_sexpr nt_end) in
+   let packed1 = pack nt1 (fun (s, (sexp, e)) -> ScmPair ((ScmSymbol "format"), (ScmPair ((ScmString "~a"),(ScmPair (sexp, ScmNil)))))) in
+   let packed = disj packed1 packed in
+   packed str
  and nt_vector str =
    let nt1 = word "#(" in
    let nt2 = caten nt_skip_star (char ')') in
@@ -253,16 +259,57 @@
    let nt1 = caten nt1 nt2 in
    let nt1 = pack nt1 (fun (_, sexpr) -> sexpr) in
    nt1 str
- (*and nt_list str = raise X_not_yet_implemented
- and nt_quoted str = raise X_not_yet_implemented
- and nt_quasi_quoted str = raise X_not_yet_implemented
- and nt_unquoted str = raise X_not_yet_implemented
- and nt_unquoted_and_splice str = raise X_not_yet_implemented
- and nt_quoted_forms str = raise X_not_yet_implemented*)
+ and nt_proper_list str = 
+   let nt1 = char '(' in
+   let nt2 = char ')' in 
+   let nt3 = star nt_sexpr in
+   let nt4 = caten nt1 nt3 in
+   let nt5 = caten nt4 nt2 in
+   let packed = pack nt5 (fun ((poteach, s), soger)-> List.fold_right (fun a b -> ScmPair(a,b)) s ScmNil) in
+   packed str
+and nt_improper_list str = 
+   let nt1 = char '(' in
+   let nt2 = char ')' in 
+   let nt_nekuda = char '.' in
+   let nt3 = star nt_sexpr in
+   let nt4 = caten nt1 nt3 in
+   let nt5 = caten nt4 nt_nekuda in
+   let nt6 = caten nt5 nt_sexpr in 
+   let nt7 = caten nt6 nt2 in
+   let packed = pack nt7 (fun ((((poteah,s),nek),sexp),soger) -> List.fold_right (fun a b -> ScmPair(a,b)) s sexp) in
+   packed str
+ and nt_list str = 
+   let nt1 = disj nt_proper_list nt_improper_list in
+   nt1 str
+ and nt_quoted str = 
+   let nt_quote = char '\'' in
+   let nt_quotes = caten nt_quote nt_sexpr in
+   let packed = pack nt_quotes (fun (c, s) -> ScmPair(ScmSymbol("quote"), ScmPair(s, ScmNil))) in
+   packed str
+ and nt_quasi_quoted str = 
+   let nt_quote = char '`' in
+   let nt_quotes = caten nt_quote nt_sexpr in
+   let packed = pack nt_quotes (fun (c, s) -> ScmPair(ScmSymbol("quasiquote"), ScmPair(s, ScmNil))) in
+ packed str
+ and nt_unquoted str = 
+   let nt_quote = char ',' in
+   let nt_quotes = caten nt_quote nt_sexpr in
+   let packed = pack nt_quotes (fun (c, s) -> ScmPair(ScmSymbol("unquote"), ScmPair(s, ScmNil))) in
+   packed str
+ and nt_unquoted_and_splice str = 
+   let nt_quote = word ",@" in
+   let nt_quotes = caten nt_quote nt_sexpr in
+   let packed = pack nt_quotes (fun (c, s) -> ScmPair(ScmSymbol("unquote-splicing"), ScmPair(s, ScmNil))) in
+   packed str
+ and nt_quoted_forms str = 
+   let nt1 = disj nt_quoted nt_quasi_quoted in 
+   let nt1 = disj nt1 nt_unquoted in 
+   let nt1 = disj nt1 nt_unquoted_and_splice in
+   nt1 str
  and nt_sexpr str =
    let nt1 =
      disj_list [nt_number; nt_boolean; nt_char; nt_symbol;
-                (*nt_string;*) nt_vector;(* nt_list; nt_quoted_forms*)] in
+                nt_string; nt_vector; nt_list; nt_quoted_forms] in
    let nt1 = make_skipped_star nt1 in
    nt1 str;;
 (*  
