@@ -133,11 +133,6 @@ module PC = struct
     else pack(caten nt (power nt (n - 1)))
            (fun (e, es) -> e :: es);;    
 
-  let rec ourPower nt n =
-    if n = 0 then 1.0
-    else if n > 0 then nt *. (ourPower nt (n-1))
-    else (ourPower nt (n+1)) /. nt;;
-
   let at_least nt n =
     pack (caten (power nt n) (star nt))
       (fun (es_1, es_2) -> es_1 @ es_2);;

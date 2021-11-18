@@ -34,6 +34,10 @@
  
  let unitify nt = pack nt (fun _ -> ());;
  let nt_digit = range '0' '9';;
+ let rec ourPower nt n =
+   if n = 0 then 1.0
+   else if n > 0 then nt *. (ourPower nt (n-1))
+   else (ourPower nt (n+1)) /. nt;;
  let nt_natural = 
    let rec nt str = 
      pack (caten nt_digit
@@ -52,15 +56,25 @@
    let nt_star_all_chars = unitify(star nt_all_chars) in
    let comment = caten (caten nt_semicolon nt_star_all_chars) nt_end_of_line_or_file in 
    (unitify comment) str
- (*and nt_paired_comment str = raise X_not_yet_implemented*)
+ and nt_paired_comment str = 
+   let nt1 = char '{' in
+   let nt2 = disj_list 
+              [unitify nt_char; unitify nt_string; unitify nt_comment] in
+    let nt22 = disj nt2 (unitify (one_of "{}")) in
+    let nt3 = diff (unitify (nt_any)) nt22 in
+    let nt3 = disj nt3 nt2 in
+    let nt3 = star nt3 in
+    let nt4 = char '}' in 
+    let nt1 = unitify (caten nt1 (caten nt3 nt4)) in
+    nt1 str
  and nt_sexpr_comment str = 
-   let nt_start = unitify(word "#;") in
-   let nt1 = caten nt_start (unitify(nt_sexpr)) in
-   (unitify nt1) str
+   let nt_start = word "#;" in
+   let nt1 = unitify (caten nt_start nt_sexpr) in
+   nt1 str
  and nt_comment str =
    disj_list
      [nt_line_comment;
-      (*nt_paired_comment;*)
+      nt_paired_comment;
       nt_sexpr_comment] str
  and nt_skip_star str =
    let nt1 = disj (unitify nt_whitespace) nt_comment in
@@ -82,10 +96,12 @@
    |Some('-') -> n*(-1)
    | _ -> raise X_no_match ) in
    packed str
- and nt_frac str = (*check what to do with 0*)
+ and nt_frac str = 
    let nt_slesh = char '/' in
    let nt1 = caten nt_int (caten nt_slesh nt_natural) in
-   let packed = pack nt1 (fun (i, (s, n)) -> ScmRational((i/(gcd i n)), (n/(gcd i n)))) in
+   let packed = pack nt1 (fun (i, (s, n)) -> (i,n)) in
+   let packed = only_if packed (fun (i,n)->not (n=0)) in
+   let packed = pack packed (fun (i, n) -> ScmRational((i/(gcd i n)), (n/(gcd i n)))) in
    packed str
  and nt_integer_part str = 
    let nt1 = plus nt_digit in
@@ -184,6 +200,7 @@
  and nt_symbol_char str = 
     let nt1 = range 'a' 'z' in
     let nt2 = disj nt1 (range 'A' 'Z') in
+    let nt2 = disj nt2 (range '0' '9') in
     let nt3 = disj nt2 (char '!') in
     let nt4 = disj nt3 (char '$') in
     let nt4 = disj nt4 (char '^') in
@@ -208,11 +225,10 @@
    let nt1 = range '!' '}' in
    let nt1 = diff nt1 (char '\\') in
    let nt1 = diff nt1 (char '\"') in
-   let packed = pack nt1 (fun (c) -> c) in
    nt1 str
  and nt_string_interpolated str = 
-   let nt_start = word "\"~{" in
-   let nt_end = word "}\"" in
+   let nt_start = word "~{" in
+   let nt_end = word "}" in
    let nt1 = caten nt_start (caten nt_sexpr nt_end) in
    let packed = pack nt1 (fun (s, (sexp, e)) -> ScmPair ((ScmSymbol "format"), (ScmPair ((ScmString "~a"), sexp)))) in
    packed str
@@ -233,19 +249,13 @@
    packed str
  and nt_string_char str = 
    let nt1 = disj nt_string_literal nt_string_meta in
-   let nt1 = disj nt1 nt_string_hex_char in 
+   let nt1 = disj nt1 nt_string_hex_char in
    nt1 str
  and nt_string str = 
    let nt1 = star nt_string_char in
    let nt_geresh = word "\"" in
    let nt1 = caten nt_geresh (caten nt1 nt_geresh) in
    let packed = pack nt1 (fun (g1, (st, g2)) -> ScmString(list_to_string st)) in
-
-   let nt_start = word "\"~{" in
-   let nt_end = word "}\"" in
-   let nt1 = caten nt_start (caten nt_sexpr nt_end) in
-   let packed1 = pack nt1 (fun (s, (sexp, e)) -> ScmPair ((ScmSymbol "format"), (ScmPair ((ScmString "~a"),(ScmPair (sexp, ScmNil)))))) in
-   let packed = disj packed1 packed in
    packed str
  and nt_vector str =
    let nt1 = word "#(" in
