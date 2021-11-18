@@ -25,11 +25,11 @@
    | ScmVector of (sexpr list)
    | ScmPair of (sexpr * sexpr);;
  
- (* module type READER = sig
+  module type READER = sig
      val nt_sexpr : sexpr PC.parser
  end;; (* end of READER signature *)
  
- module Reader : READER = struct *)
+ module Reader : READER = struct 
  open PC;;
  
  let unitify nt = pack nt (fun _ -> ());;
@@ -51,7 +51,7 @@
    let nt1 = disj nt1 nt2 in
    nt1 str
  and nt_line_comment str =
-   let nt_semicolon = unitify(char ';') in
+   let nt_semicolon = char ';' in
    let nt_all_chars = unitify(range ' ' '~') in
    let nt_star_all_chars = unitify(star nt_all_chars) in
    let comment = caten (caten nt_semicolon nt_star_all_chars) nt_end_of_line_or_file in 
@@ -167,6 +167,7 @@
    let nt2 = pack (word_ci "#t") (fun _ -> true) in
    let nt1 = disj nt1 nt2 in
    let nt1 = pack nt1 (fun r -> ScmBoolean r) in
+   let nt1 = not_followed_by nt1 nt_char_simple in
    nt1 str
  and nt_char_simple str = 
    let nt1 = range '!' '~' in
@@ -196,6 +197,7 @@
    let nt1 = disj nt1 nt_char_simple in
    let nt1 = caten char_pref nt1 in
    let packed = pack nt1 (fun (pref,c) -> ScmChar c) in
+   let packed = not_followed_by packed nt_symbol_char in
    packed str
  and nt_symbol_char str = 
     let nt1 = range 'a' 'z' in
@@ -222,9 +224,10 @@
    let nt1 = diff nt1 nt_number in
    nt1 str
  and nt_string_literal str =
-   let nt1 = range '!' '}' in
+   let nt1 = nt_any in
    let nt1 = diff nt1 (char '\\') in
    let nt1 = diff nt1 (char '\"') in
+   let nt1 = diff nt1 (char '~') in
    nt1 str
  and nt_string_interpolated str = 
    let nt_start = word "~{" in
@@ -235,21 +238,21 @@
  and nt_string_meta str =
    let nt1 = pack (word "\\\\") (fun _ -> '\\') in
    let nt1 = disj nt1 (pack (word "\\\"") (fun _ -> '\"')) in
-   let nt1 = disj nt1 (pack (word "\\\t") (fun _ -> '\t')) in
-   let nt1 = disj nt1 (pack (word "\\\012") (fun _ -> '\012')) in
-   let nt1 = disj nt1 (pack (word "\\\n") (fun _ -> '\n')) in
-   let nt1 = disj nt1 (pack (word "\\\r") (fun _ -> '\r')) in
+   let nt1 = disj nt1 (pack (word "\\t") (fun _ -> '\t')) in
+   let nt1 = disj nt1 (pack (word "\\f") (fun _ -> '\012')) in
+   let nt1 = disj nt1 (pack (word "\\n") (fun _ -> '\n')) in
+   let nt1 = disj nt1 (pack (word "\\r") (fun _ -> '\r')) in
    let nt1 = disj nt1 (pack (word "~~") (fun _ -> '~')) in
    nt1 str
  and nt_string_hex_char str =
-   let nt1 = word "/x" in
+   let nt1 = word "\\x" in
    let nt2 = caten nt1 (plus nt_char_hex) in
    let nt2 = caten nt2 (word ";") in
    let packed = pack nt2 (fun ((bx,chex),semic) -> char_of_int(int_of_string("0x"^(list_to_string chex)))) in
    packed str
  and nt_string_char str = 
-   let nt1 = disj nt_string_literal nt_string_meta in
-   let nt1 = disj nt1 nt_string_hex_char in
+   let nt1 = disj nt_string_meta nt_string_hex_char in
+   let nt1 = disj nt1 nt_string_literal in
    nt1 str
  and nt_string str = 
    let nt1 = star nt_string_char in
@@ -322,9 +325,9 @@ and nt_improper_list str =
                 nt_string; nt_vector; nt_list; nt_quoted_forms] in
    let nt1 = make_skipped_star nt1 in
    nt1 str;;
-(*  
+ 
  end;; (* end of struct Reader *)
-  *)
+  
  let rec string_of_sexpr = function
    | ScmVoid -> "#<void>"
    | ScmNil -> "()"
