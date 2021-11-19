@@ -116,7 +116,7 @@
    let packed = pack nt1 (fun s -> int_of_string(list_to_string s)) in
    packed str
  and nt_exponent str = 
-   let exponent_token = disj (word_ci "e") (disj (word "10^") (word "*10*")) in
+   let exponent_token = disj (word_ci "e") (disj (word "*10^") (word "*10**")) in
    let nt1 = caten exponent_token nt_int in
    let packed = pack nt1 (fun (t,i) -> ourPower 10.0 i) in
    packed str
