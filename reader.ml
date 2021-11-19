@@ -24,12 +24,12 @@
    | ScmNumber of scm_number
    | ScmVector of (sexpr list)
    | ScmPair of (sexpr * sexpr);;
- (*
+ 
   module type READER = sig
      val nt_sexpr : sexpr PC.parser
  end;; (* end of READER signature *)
  
- module Reader : READER = struct *) 
+ module Reader : READER = struct 
  open PC;;
 
  let unitify nt = pack nt (fun _ -> ());;
@@ -116,7 +116,7 @@
    let packed = pack nt1 (fun s -> int_of_string(list_to_string s)) in
    packed str
  and nt_exponent str = 
-   let exponent_token = disj (word_ci "e") (disj (word "*10^") (word "*10**")) in
+   let exponent_token = disj (word_ci "e") (disj (word "10^") (word "*10*")) in
    let nt1 = caten exponent_token nt_int in
    let packed = pack nt1 (fun (t,i) -> ourPower 10.0 i) in
    packed str
@@ -171,7 +171,7 @@
    let nt2 = pack (word_ci "#t") (fun _ -> true) in
    let nt1 = disj nt1 nt2 in
    let nt1 = pack nt1 (fun r -> ScmBoolean r) in
-   let nt1 = not_followed_by nt1 nt_char_simple in
+   let nt1 = not_followed_by nt1 nt_symbol_char in
    nt1 str
  and nt_char_simple str = 
    let nt1 = range '!' '~' in
@@ -246,7 +246,7 @@
    let nt1 = disj nt1 (pack (word "\\f") (fun _ -> '\012')) in
    let nt1 = disj nt1 (pack (word "\\n") (fun _ -> '\n')) in
    let nt1 = disj nt1 (pack (word "\\r") (fun _ -> '\r')) in
-   let nt1 = disj nt1 (pack (word "~~") (fun _ -> '~')) in
+   let nt1 = disj nt1 (pack (word "~") (fun _ -> '')) in
    nt1 str
  and nt_string_hex_char str =
    let nt1 = word "\\x" in
@@ -286,17 +286,17 @@
    let nt1 = pack nt1 (fun (_, sexpr) -> sexpr) in
    nt1 str
  and nt_proper_list str = 
-   let nt1 = char '(' in
-   let nt2 = char ')' in 
+   let nt1 = caten (char '(') nt_skip_star in
+   let nt2 = caten nt_skip_star (char ')') in 
    let nt3 = star nt_sexpr in
    let nt4 = caten nt1 nt3 in
    let nt5 = caten nt4 nt2 in
    let packed = pack nt5 (fun ((poteach, s), soger)-> List.fold_right (fun a b -> ScmPair(a,b)) s ScmNil) in
    packed str
 and nt_improper_list str = 
-   let nt1 = char '(' in
-   let nt2 = char ')' in 
-   let nt_nekuda = char '.' in
+   let nt1 = caten (char '(') nt_skip_star in
+   let nt2 = caten nt_skip_star (char ')') in 
+   let nt_nekuda = caten nt_skip_star (caten (char '.') nt_skip_star) in
    let nt3 = star nt_sexpr in
    let nt4 = caten nt1 nt3 in
    let nt5 = caten nt4 nt_nekuda in
@@ -339,7 +339,7 @@ and nt_improper_list str =
    let nt1 = make_skipped_star nt1 in
    nt1 str;;
  
- (*end;; (* end of struct Reader *)*)
+ end;; (* end of struct Reader *)
   
  let rec string_of_sexpr = function
    | ScmVoid -> "#<void>"
