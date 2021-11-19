@@ -246,7 +246,7 @@
    let nt1 = disj nt1 (pack (word "\\f") (fun _ -> '\012')) in
    let nt1 = disj nt1 (pack (word "\\n") (fun _ -> '\n')) in
    let nt1 = disj nt1 (pack (word "\\r") (fun _ -> '\r')) in
-   let nt1 = disj nt1 (pack (word "~") (fun _ -> '')) in
+   let nt1 = disj nt1 (pack (word "~~") (fun _ -> '~')) in
    nt1 str
  and nt_string_hex_char str =
    let nt1 = word "\\x" in
