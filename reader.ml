@@ -24,20 +24,24 @@
    | ScmNumber of scm_number
    | ScmVector of (sexpr list)
    | ScmPair of (sexpr * sexpr);;
- 
+ (*
   module type READER = sig
      val nt_sexpr : sexpr PC.parser
  end;; (* end of READER signature *)
  
- module Reader : READER = struct 
+ module Reader : READER = struct *) 
  open PC;;
- 
+
  let unitify nt = pack nt (fun _ -> ());;
  let nt_digit = range '0' '9';;
  let rec ourPower nt n =
    if n = 0 then 1.0
    else if n > 0 then nt *. (ourPower nt (n-1))
    else (ourPower nt (n+1)) /. nt;;
+ let rec list_to_proper =
+  function
+    | [] ->ScmNil
+    | hd::tl -> ScmPair(hd, list_to_proper tl);;
  let nt_natural = 
    let rec nt str = 
      pack (caten nt_digit
@@ -233,7 +237,7 @@
    let nt_start = word "~{" in
    let nt_end = word "}" in
    let nt1 = caten nt_start (caten nt_sexpr nt_end) in
-   let packed = pack nt1 (fun (s, (sexp, e)) -> ScmPair ((ScmSymbol "format"), (ScmPair ((ScmString "~a"), sexp)))) in
+   let packed = pack nt1 (fun (s, (sexp, e)) -> ScmPair ((ScmSymbol "format"), (ScmPair ((ScmString "~a"), ScmPair(sexp,ScmNil))))) in
    packed str
  and nt_string_meta str =
    let nt1 = pack (word "\\\\") (fun _ -> '\\') in
@@ -254,11 +258,20 @@
    let nt1 = disj nt_string_meta nt_string_hex_char in
    let nt1 = disj nt1 nt_string_literal in
    nt1 str
+   
+ and nt_static_string str = 
+   let nt1 = plus nt_string_char in
+   let packed = pack nt1 (fun st -> ScmString(list_to_string st)) in
+   packed str
+   
  and nt_string str = 
-   let nt1 = star nt_string_char in
    let nt_geresh = word "\"" in
-   let nt1 = caten nt_geresh (caten nt1 nt_geresh) in
-   let packed = pack nt1 (fun (g1, (st, g2)) -> ScmString(list_to_string st)) in
+   let strng = star (disj nt_string_interpolated nt_static_string) in
+   let packed = caten nt_geresh (caten strng nt_geresh) in
+   let packed = pack packed (fun (g,(s,g1)) -> match (s) with
+   [] -> ScmString("")
+   | hd::[] -> hd
+   | hd::tl -> list_to_proper([ScmSymbol "string-append"]@s)) in
    packed str
  and nt_vector str =
    let nt1 = word "#(" in
@@ -326,7 +339,7 @@ and nt_improper_list str =
    let nt1 = make_skipped_star nt1 in
    nt1 str;;
  
- end;; (* end of struct Reader *)
+ (*end;; (* end of struct Reader *)*)
   
  let rec string_of_sexpr = function
    | ScmVoid -> "#<void>"
@@ -390,4 +403,3 @@ and nt_improper_list str =
    | cdr ->
       let cdr_string = (string_of_sexpr cdr) in
       Printf.sprintf "(%s . %s)" car_string cdr_string;;
- 
