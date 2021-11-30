@@ -153,6 +153,12 @@ let reserved_word_list =
    "if"; "lambda"; "let"; "let*"; "letrec"; "or";
    "quasiquote"; "quote"; "set!"; "unquote";
    "unquote-splicing"];;
+let bodyParsing body =
+ match body with
+    ScmNil -> ScmVoid
+    | ScmPair(bodyArg,ScmNil) -> (tag_parse_expression bodyArg)
+    | ScmPair(_, _) -> ScmSeq((scm_list_to_list (scm_map (fun listArg -> (tag_parse_expression listArg)))))
+    | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")
 
 let rec tag_parse_expression sexpr =
 let sexpr = macro_expand sexpr in
@@ -163,7 +169,29 @@ match sexpr with
 | ScmNumber(x) -> ScmConst(ScmNumber(x))
 | ScmString(s) -> ScmConst(ScmString(s))
 | ScmPair(ScmSymbol("quote"), Pair(x, ScmNil)) -> ScmConst(x)
-| ScmSymbol(x) -> raise X_no_match
+| ScmSymbol(x) -> if(reserved_word_list.mem(x)) then ScmVar(x) else raise (X_reserved_word x) (*need to check mem *)
+| ScmPair(ScmSymbol("if"),
+          ScmPair(test,
+                  ScmPair(dit,
+                          ScmPair(dif,ScmNil)))) -> 
+                              ScmIf((tag_parse_expression test),(tag_parse_expression dit),(tag_parse_expression dif))
+| ScmPair(ScmSymbol("if"),
+          ScmPair(test,
+                  ScmPair(dit,ScmNil))) ->
+                      ScmIf((tag_parse_expression test),(tag_parse_expression dit),ScmConst(ScmVoid))
+| ScmPair(ScmSymbol("or"),
+          x)
+          match x with
+          ScmNil -> ScmConst(ScmBoolean("false"))
+          | ScmPair(a, ScmNil) -> (tag_parse_expression a)
+          | ScmPair(a, ScmPair(z)) -> (scm_list_to_list x).map((fun y -> (tag_parse_expression y))) (*check map syntax*)
+          | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")
+| ScmPair(ScmSymbol("lambda"),
+          ScmPair(args,body)) -> match args with
+          ScmPair(arg,ScmNil) -> ScmLambdaSimple((scm_list_to_list (scm_map (fun ScmSymbol(a) -> a) args)), 
+                          
+          
+          )
 
 (*
 | ScmPair(ScmSymbol("unquote"), Pair(x, ScmNil)) -> ScmConst(x)
