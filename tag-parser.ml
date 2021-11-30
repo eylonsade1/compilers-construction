@@ -157,7 +157,19 @@ let reserved_word_list =
 let rec tag_parse_expression sexpr =
 let sexpr = macro_expand sexpr in
 match sexpr with 
-(* Implement tag parsing here *)
+  ScmNil -> ScmConst(ScmNil)
+| ScmBoolean(bool) -> ScmConst(ScmBoolean(bool))
+| ScmChar(ch) -> ScmConst(ScmChar(ch))
+| ScmNumber(x) -> ScmConst(ScmNumber(x))
+| ScmString(s) -> ScmConst(ScmString(s))
+| ScmPair(ScmSymbol("quote"), Pair(x, ScmNil)) -> ScmConst(x)
+| ScmSymbol(x) -> raise X_no_match
+
+(*
+| ScmPair(ScmSymbol("unquote"), Pair(x, ScmNil)) -> ScmConst(x)
+| ScmPair(ScmSymbol("quasiquote"), Pair(x, ScmNil)) -> ScmConst(x)
+| ScmPair(ScmSymbol("unquote-splicing"), Pair(x, ScmNil)) -> ScmConst(x)
+ *)
 | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized"))
 
 and macro_expand sexpr =
@@ -166,3 +178,16 @@ match sexpr with
 | _ -> sexpr
 end;; 
 
+(*
+type expr =
+  | ScmConst of sexpr
+  | ScmVar of string
+  | ScmIf of expr * expr * expr
+  | ScmSeq of expr list
+  | ScmSet of expr * expr
+  | ScmDef of expr * expr
+  | ScmOr of expr list
+  | ScmLambdaSimple of string list * expr
+  | ScmLambdaOpt of string list * string * expr
+  | ScmApplic of expr * (expr list);;
+ *)
