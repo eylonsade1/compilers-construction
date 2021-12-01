@@ -22,6 +22,18 @@ let rec list_to_proper_list = function
 | hd::[] -> ScmPair (hd, ScmNil)
 | hd::tl -> ScmPair (hd, list_to_proper_list tl);;
 
+let rec improper_to_list_without_last_arg = function
+| ScmPair(hd, ScmPair(x,y)) -> hd::(improper_to_list_without_last_arg ScmPair(x,y))
+| ScmPair(head, ScmNil) ->  (X_syntax_error "unable to recognize improper list parse")
+| ScmPair(head,tail) -> (head::[])
+| _ -> raise (X_syntax_error "unable to recognize improper list parse");;
+
+let rec improper_tail = function
+| ScmPair(hd, ScmPair(x,y)) -> (improper_tail ScmPair(x,y))
+| ScmPair(head, ScmNil) ->  (X_syntax_error "unable to recognize improper list parse")
+| ScmPair(head,tail) -> tail
+| _ -> raise (X_syntax_error "unable to recognize improper list parse");;
+
 let rec list_to_improper_list = function
 | [] -> raise X_proper_list_error
 | hd::[] -> hd
@@ -148,6 +160,8 @@ end;;
 
 module Tag_Parser : TAG_PARSER = struct
 
+
+
 let reserved_word_list =
   ["and"; "begin"; "cond"; "define"; "else";
    "if"; "lambda"; "let"; "let*"; "letrec"; "or";
@@ -192,8 +206,8 @@ match sexpr with
           ScmNil -> ScmLambdaSimple(ScmNil,(bodyParsing body))
           | ScmPair(_ ,_) -> if (scm_is_list args)
             then ScmLambdaSimple((scm_list_to_list (scm_map (fun ScmSymbol(ar) -> ar) args)), (bodyParsing body))
-            else ScmLambdaOpt(ScmVoid, bodyParsing body)
-          | ScmSymbol(sym) ->
+            else ScmLambdaOpt((improper_to_list_without_last_arg args), (improper_tail args), (bodyParsing body))
+          | ScmSymbol(sym) -> ScmLambdaOpt([], sym, (bodyParsing body))
           | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")             
           )
 
