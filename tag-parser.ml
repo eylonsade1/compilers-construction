@@ -187,10 +187,14 @@ match sexpr with
           | ScmPair(a, ScmPair(z)) -> (scm_list_to_list x).map((fun y -> (tag_parse_expression y))) (*check map syntax*)
           | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")
 | ScmPair(ScmSymbol("lambda"),
-          ScmPair(args,body)) -> match args with
-          ScmPair(arg,ScmNil) -> ScmLambdaSimple((scm_list_to_list (scm_map (fun ScmSymbol(a) -> a) args)), 
-                          
-          
+          ScmPair(args,body)) -> 
+          match args with
+          ScmNil -> ScmLambdaSimple(ScmNil,(bodyParsing body))
+          | ScmPair(_ ,_) -> if (scm_is_list args)
+            then ScmLambdaSimple((scm_list_to_list (scm_map (fun ScmSymbol(ar) -> ar) args)), (bodyParsing body))
+            else ScmLambdaOpt(ScmVoid, bodyParsing body)
+          | ScmSymbol(sym) ->
+          | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")             
           )
 
 (*
