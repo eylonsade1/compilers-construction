@@ -23,16 +23,16 @@ let rec list_to_proper_list = function
 | hd::tl -> ScmPair (hd, list_to_proper_list tl);;
 
 let rec improper_to_list_without_last_arg = function
-| ScmPair(hd, ScmPair(x,y)) -> hd::(improper_to_list_without_last_arg ScmPair(x,y))
-| ScmPair(head, ScmNil) ->  (X_syntax_error "unable to recognize improper list parse")
-| ScmPair(head,tail) -> (head::[])
-| _ -> raise (X_syntax_error "unable to recognize improper list parse");;
+| ScmPair(ScmSymbol(hd), ScmPair(x,y)) -> hd::(improper_to_list_without_last_arg (ScmPair(x,y)))
+| ScmPair(head, ScmNil) ->  raise (X_syntax_error (ScmPair(head, ScmNil) ,"unable to recognize improper list parse"))
+| ScmPair(ScmSymbol(head),tail) -> (head::[])
+| exep -> raise (X_syntax_error ( exep ,"unable to recognize improper list parse"));;
 
 let rec improper_tail = function
-| ScmPair(hd, ScmPair(x,y)) -> (improper_tail ScmPair(x,y))
-| ScmPair(head, ScmNil) ->  (X_syntax_error "unable to recognize improper list parse")
-| ScmPair(head,tail) -> tail
-| _ -> raise (X_syntax_error "unable to recognize improper list parse");;
+| ScmPair(hd, ScmPair(x,y)) -> (improper_tail (ScmPair(x,y)))
+| ScmPair(head, ScmNil) ->  raise (X_syntax_error (ScmPair(head, ScmNil) ,"unable to recognize improper list parse"))
+| ScmPair(head,ScmSymbol(tail)) -> tail
+| exep -> raise (X_syntax_error ( exep ,"unable to recognize improper list parse"));;
 
 let rec list_to_improper_list = function
 | [] -> raise X_proper_list_error
@@ -167,12 +167,6 @@ let reserved_word_list =
    "if"; "lambda"; "let"; "let*"; "letrec"; "or";
    "quasiquote"; "quote"; "set!"; "unquote";
    "unquote-splicing"];;
-let bodyParsing body =
- match body with
-    ScmNil -> ScmVoid
-    | ScmPair(bodyArg,ScmNil) -> (tag_parse_expression bodyArg)
-    | ScmPair(_, _) -> ScmSeq((scm_list_to_list (scm_map (fun listArg -> (tag_parse_expression listArg)))))
-    | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")
 
 let rec tag_parse_expression sexpr =
 let sexpr = macro_expand sexpr in
@@ -182,8 +176,8 @@ match sexpr with
 | ScmChar(ch) -> ScmConst(ScmChar(ch))
 | ScmNumber(x) -> ScmConst(ScmNumber(x))
 | ScmString(s) -> ScmConst(ScmString(s))
-| ScmPair(ScmSymbol("quote"), Pair(x, ScmNil)) -> ScmConst(x)
-| ScmSymbol(x) -> if(reserved_word_list.mem(x)) then ScmVar(x) else raise (X_reserved_word x) (*need to check mem *)
+| ScmPair(ScmSymbol("quote"), ScmPair(x, ScmNil)) -> ScmConst(x)
+| ScmSymbol(x) -> if(List.mem x reserved_word_list) then ScmVar(x) else raise (X_reserved_word x) (*need to check mem *)
 | ScmPair(ScmSymbol("if"),
           ScmPair(test,
                   ScmPair(dit,
@@ -193,36 +187,44 @@ match sexpr with
           ScmPair(test,
                   ScmPair(dit,ScmNil))) ->
                       ScmIf((tag_parse_expression test),(tag_parse_expression dit),ScmConst(ScmVoid))
-| ScmPair(ScmSymbol("or"),
-          x)
-          match x with
-          ScmNil -> ScmConst(ScmBoolean("false"))
+| ScmPair(ScmSymbol("or"), x) ->
+          (match x with
+          ScmNil -> ScmConst(ScmBoolean(false))
           | ScmPair(a, ScmNil) -> (tag_parse_expression a)
-          | ScmPair(a, ScmPair(z)) -> (scm_list_to_list x).map((fun y -> (tag_parse_expression y))) (*check map syntax*)
-          | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")
+          | ScmPair(a, ScmPair(z)) -> ScmOr(List.map (fun y -> (tag_parse_expression y)) (scm_list_to_list x)) 
+          | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")))
 | ScmPair(ScmSymbol("lambda"),
           ScmPair(args,body)) -> 
-          match args with
-          ScmNil -> ScmLambdaSimple(ScmNil,(bodyParsing body))
-          | ScmPair(_ ,_) -> if (scm_is_list args)
-            then ScmLambdaSimple((scm_list_to_list (scm_map (fun ScmSymbol(ar) -> ar) args)), (bodyParsing body))
-            else ScmLambdaOpt((improper_to_list_without_last_arg args), (improper_tail args), (bodyParsing body))
+          (match args with
+          ScmNil -> ScmLambdaSimple([],(bodyParsing body))
+          | ScmPair(_ ,_) -> 
+            if (scm_is_list args)
+              then ScmLambdaSimple((List.map (fun (ar) -> (sexpr_to_string ar)) (scm_list_to_list args)), (bodyParsing body))
+              else ScmLambdaOpt((improper_to_list_without_last_arg args), (improper_tail args), (bodyParsing body))
           | ScmSymbol(sym) -> ScmLambdaOpt([], sym, (bodyParsing body))
-          | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")             
-          )
-
+          | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized"))
+)
 (*
 | ScmPair(ScmSymbol("unquote"), Pair(x, ScmNil)) -> ScmConst(x)
 | ScmPair(ScmSymbol("quasiquote"), Pair(x, ScmNil)) -> ScmConst(x)
 | ScmPair(ScmSymbol("unquote-splicing"), Pair(x, ScmNil)) -> ScmConst(x)
- *)
+*)
 | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized"))
+and sexpr_to_string = function
+  | ScmSymbol(x) -> x
+  | exp -> raise (X_syntax_error (exp, "Sexpr structure not recognized"))
+
+and bodyParsing = function
+    | ScmNil -> ScmConst(ScmVoid)
+    | ScmPair(bodyArg,ScmNil) -> (tag_parse_expression bodyArg)
+    | ScmPair(hd, tl) -> ScmSeq(List.map(fun listArg -> (tag_parse_expression listArg)) (scm_list_to_list (ScmPair(hd,tl))))
+    | exp -> raise (X_syntax_error (exp, "Sexpr structure not recognized"))
 
 and macro_expand sexpr =
 match sexpr with
 (* Handle macro expansion patterns here *)
 | _ -> sexpr
-end;; 
+end;;
 
 (*
 type expr =
