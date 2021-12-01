@@ -177,7 +177,7 @@ match sexpr with
 | ScmNumber(x) -> ScmConst(ScmNumber(x))
 | ScmString(s) -> ScmConst(ScmString(s))
 | ScmPair(ScmSymbol("quote"), ScmPair(x, ScmNil)) -> ScmConst(x)
-| ScmSymbol(x) -> if(List.mem x reserved_word_list) then ScmVar(x) else raise (X_reserved_word x) (*need to check mem *)
+| ScmSymbol(x) -> if(List.mem x reserved_word_list) then raise (X_reserved_word x)  else ScmVar(x) 
 | ScmPair(ScmSymbol("if"),
           ScmPair(test,
                   ScmPair(dit,
@@ -202,8 +202,14 @@ match sexpr with
               then ScmLambdaSimple((List.map (fun (ar) -> (sexpr_to_string ar)) (scm_list_to_list args)), (bodyParsing body))
               else ScmLambdaOpt((improper_to_list_without_last_arg args), (improper_tail args), (bodyParsing body))
           | ScmSymbol(sym) -> ScmLambdaOpt([], sym, (bodyParsing body))
-          | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized"))
-)
+          | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")))
+| ScmPair(ScmSymbol("define"), ScmPair(ScmSymbol(var), ScmPair(x , ScmNil))) -> ScmDef((tag_parse_expression (ScmSymbol(var))), (tag_parse_expression x))
+| ScmPair(ScmSymbol("define"), ScmPair((ScmPair(ScmSymbol(funcName), args), body))) -> ScmDef((tag_parse_expression (ScmSymbol(funcName))), (tag_parse_expression (ScmPair(ScmSymbol("lambda"), ScmPair(args, body)))))
+| ScmPair(ScmSymbol("set!"), ScmPair(ScmSymbol(var), ScmPair(value, ScmNil))) -> ScmSet((tag_parse_expression (ScmSymbol(var))),(tag_parse_expression value))(*add exeption of "Expected variable on LHS of set!"*)
+| ScmPair(ScmSymbol("begin"), seqBody) -> ScmSeq(List.map tag_parse_expression (scm_list_to_list seqBody))
+| ScmPair(ScmSymbol(funcName), rest) -> ScmApplic((tag_parse_expression (ScmSymbol(funcName))),(List.map tag_parse_expression (scm_list_to_list rest))) (*check parse func name *)
+| ScmPair(ScmPair(ScmSymbol("lambda"), body), argVal) -> ScmApplic((tag_parse_expression (ScmPair(ScmSymbol("lambda"), body)), (List.map tag_parse_expression (scm_list_to_list argVal))))
+
 (*
 | ScmPair(ScmSymbol("unquote"), Pair(x, ScmNil)) -> ScmConst(x)
 | ScmPair(ScmSymbol("quasiquote"), Pair(x, ScmNil)) -> ScmConst(x)
@@ -222,8 +228,51 @@ and bodyParsing = function
 
 and macro_expand sexpr =
 match sexpr with
-(* Handle macro expansion patterns here *)
+  ScmPair(ScmSymbol("and"), andBody) -> (expand_and_macro andBody)
+| ScmPair(ScmSymbol("let"), ScmPair(ribs, ScmPair(body,ScmNil))) -> ScmPair((ScmPair(ScmSymbol("lambda"), ScmPair((get_all_vars ribs) ,body))), (get_all_values ribs)) 
+| ScmPair(ScmSymbol("let*"), letStarBody) -> (macro_expand (expand_let_star_macro letStarBody))
+| ScmPair(ScmSymbol("letrec"), letRecBody) -> (macro_expand (expand_letrec_macro letRecBody))
 | _ -> sexpr
+
+and expand_letrec_macro = function
+  | ScmPair(ScmNil, ScmPair(body, ScmNil)) -> (ScmPair(ScmSymbol("let"), ScmPair(ScmNil, ScmPair(ScmSymbol("let"), ScmPair(ScmNil, ScmPair(body, ScmNil))))))
+  | ScmPair(ribs, ScmPair(body, ScmNil)) -> (
+    let vars = (get_all_vars ribs) in
+    let values = (get_all_values ribs) in 
+    let demiVars = (scm_map (fun (var) -> ScmPair(var, ScmPair(ScmSymbol("whatever"), ScmNil))) vars) in
+    let setVars = (scm_zip (fun var value -> ScmPair(ScmSymbol("set!"), ScmPair(var, ScmPair(value, ScmNil)))) vars values) in
+    let letBody = ScmPair(ScmSymbol("let"), ScmPair(ScmNil, ScmPair(body, ScmNil))) in
+    let appendBody = (scm_append setVars letBody) in
+    let final = ScmPair(ScmSymbol("let"), ScmPair(demiVars, ScmPair(appendBody, ScmNil))) in
+    final
+  )
+  | sexpr -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")) (*fix error *)
+
+
+and expand_let_star_macro = function
+  | ScmPair(ScmNil, ScmPair(body, ScmNil)) -> (ScmPair(ScmSymbol("let"), ScmPair(ScmNil, ScmPair(body, ScmNil))))
+  | ScmPair(ScmPair(rib, ScmNil), ScmPair(body, ScmNil)) -> ScmPair( ScmSymbol("let"), ScmPair(ScmPair(rib, ScmNil), ScmPair(body, ScmNil)))
+  | ScmPair(ScmPair(rib, ribs), ScmPair(body, ScmNil)) -> ScmPair( ScmSymbol("let"), ScmPair(ScmPair(rib, ScmNil), ScmPair((expand_let_star_macro (ScmPair(ribs, ScmPair(body, ScmNil))), ScmNil))))
+  | sexpr -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")) (*fix error *)
+
+and expand_and_macro = function
+    | ScmNil -> ScmBoolean(true)
+    | ScmPair(a, ScmNil) -> a
+    | ScmPair(a, ScmPair(z)) -> ScmPair(ScmSymbol("if"), ScmPair(a, ScmPair(macro_expand(ScmPair(ScmSymbol("and"), ScmPair(z))), ScmBoolean(false)))) 
+    | sexpr -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")) (*fix error *)
+    
+and get_all_vars = function
+    | ScmNil -> ScmNil
+    | ScmPair(ScmPair(var, _), ribs) -> ScmPair(var, (get_all_vars ribs))
+    | sexpr -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")) (*fix error *)
+
+and get_all_values = function
+    | ScmNil -> ScmNil
+    | ScmPair(ScmPair(_, value), ribs) -> ScmPair(value, (get_all_values ribs))
+    | sexpr -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")) (*fix error *)
+
+
+
 end;;
 
 (*
