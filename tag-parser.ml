@@ -211,6 +211,7 @@ match sexpr with
 | ScmPair(ScmPair(ScmSymbol("lambda"), body), argVal) -> ScmApplic((tag_parse_expression (ScmPair(ScmSymbol("lambda"), body)), (List.map tag_parse_expression (scm_list_to_list argVal))))
 
 (*
+
 | ScmPair(ScmSymbol("unquote"), Pair(x, ScmNil)) -> ScmConst(x)
 | ScmPair(ScmSymbol("quasiquote"), Pair(x, ScmNil)) -> ScmConst(x)
 | ScmPair(ScmSymbol("unquote-splicing"), Pair(x, ScmNil)) -> ScmConst(x)
