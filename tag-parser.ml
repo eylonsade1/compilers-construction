@@ -171,7 +171,7 @@ let reserved_word_list =
 let rec tag_parse_expression sexpr =
 let sexpr = macro_expand sexpr in
 match sexpr with 
-  ScmNil -> ScmConst(ScmNil)
+  ScmNil -> ScmConst(ScmVoid)
 | ScmBoolean(bool) -> ScmConst(ScmBoolean(bool))
 | ScmChar(ch) -> ScmConst(ScmChar(ch))
 | ScmNumber(x) -> ScmConst(ScmNumber(x))
@@ -239,10 +239,28 @@ and bodyParsing = function
 and macro_expand sexpr =
 match sexpr with
   ScmPair(ScmSymbol("and"), andBody) -> (expand_and_macro andBody)
+| ScmPair(ScmSymbol("cond"), condBody) -> (macro_expand (expand_cond_macro condBody))
 | ScmPair(ScmSymbol("let"), ScmPair(ribs, ScmPair(body, ScmNil))) -> ScmPair((ScmPair(ScmSymbol("lambda"), ScmPair((get_all_vars ribs) ,ScmPair(body, ScmNil)))), (get_all_values ribs)) 
 | ScmPair(ScmSymbol("let*"), letStarBody) -> (macro_expand (expand_let_star_macro letStarBody))
 | ScmPair(ScmSymbol("letrec"), letRecBody) -> (macro_expand (expand_letrec_macro letRecBody))
 | _ -> sexpr
+
+and expand_cond_macro = function
+  | ScmNil -> ScmNil
+  | ScmPair(ScmPair(ribTest, ScmPair(ScmSymbol("=>"), ribBody)), ribs) -> (
+    let testBinding = ScmPair(ScmSymbol("value"), ribTest) in
+    let fBinding = ScmPair(ScmSymbol("f"), ribBody) in
+    let restFunc = ScmPair(ScmSymbol("lambda"), ScmPair(ScmNil, (expand_cond_macro ribs))) in
+    let restBinding = ScmPair(ScmSymbol("rest"),restFunc) in
+    let dit = ScmPair(ScmPair(ScmSymbol("f"), ScmNil), ScmSymbol("value")) in
+    let dif = ScmPair(ScmSymbol("rest"), ScmNil) in
+    let ifState = ScmPair(ScmSymbol("if"), ScmPair(ScmSymbol("value"), ScmPair(dit,ScmPair(dif,ScmNil)))) in
+    ScmPair(ScmSymbol("let"), ScmPair(ScmPair(testBinding, ScmPair(fBinding, ScmPair(restBinding, ScmNil))),ScmPair(ifState, ScmNil)))
+  )
+  | ScmPair(ScmPair(ScmSymbol("else"), body), _) -> ScmPair(ScmSymbol("begin"), body)
+  | ScmPair(ScmPair(ribTest, ribBody), ribs) -> ScmPair(ScmSymbol("if"), ScmPair(ribTest, ScmPair(ScmPair(ScmSymbol("begin"), ribBody), ScmPair((expand_cond_macro ribs), ScmNil))))
+  | sexpr -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized- cond macro")) (*fix error *)
+
 
 and expand_letrec_macro = function
   | ScmPair(ScmNil, ScmPair(body, ScmNil)) -> (ScmPair(ScmSymbol("let"), ScmPair(ScmNil, ScmPair(ScmSymbol("let"), ScmPair(ScmNil, ScmPair(body, ScmNil))))))
@@ -256,7 +274,7 @@ and expand_letrec_macro = function
     let final = ScmPair(ScmSymbol("let"), ScmPair(demiVars, ScmPair(appendBody, ScmNil))) in
     final
   )
-  | sexpr -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")) (*fix error *)
+  | sexpr -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized- letrec macro ")) (*fix error *)
 
 
 and expand_let_star_macro = function
@@ -268,7 +286,7 @@ and expand_let_star_macro = function
 and expand_and_macro = function
     | ScmNil -> ScmBoolean(true)
     | ScmPair(a, ScmNil) -> a
-    | ScmPair(a, ScmPair(z)) -> ScmPair(ScmSymbol("if"), ScmPair(a, ScmPair(macro_expand(ScmPair(ScmSymbol("and"), ScmPair(z))), ScmBoolean(false)))) 
+    | ScmPair(a, ScmPair(z)) -> ScmPair(ScmSymbol("if"), ScmPair(a, ScmPair(macro_expand(ScmPair(ScmSymbol("and"), ScmPair(z))), ScmPair(ScmBoolean(false), ScmNil)))) 
     | sexpr -> raise (X_syntax_error (sexpr, "problem with expand and macro")) (*fix error *)
     
 and get_all_vars = function
@@ -283,17 +301,3 @@ and get_all_values = function
 
 
 end;;
-
-(*
-type expr =
-  | ScmConst of sexpr
-  | ScmVar of string
-  | ScmIf of expr * expr * expr
-  | ScmSeq of expr list
-  | ScmSet of expr * expr
-  | ScmDef of expr * expr
-  | ScmOr of expr list
-  | ScmLambdaSimple of string list * expr
-  | ScmLambdaOpt of string list * string * expr
-  | ScmApplic of expr * (expr list);;
- *)
