@@ -206,7 +206,7 @@ match sexpr with
 | ScmPair(ScmPair(ScmSymbol("lambda"), body), argVal) -> ScmApplic((tag_parse_expression (ScmPair(ScmSymbol("lambda"), body)), (List.map tag_parse_expression (scm_list_to_list argVal))))
 
 (*
-| ScmPair(ScmSymbol("unquote"), Pair(x, ScmNil)) -> ScmConst(x)
+
 | ScmPair(ScmSymbol("quasiquote"), Pair(x, ScmNil)) -> ScmConst(x)
 | ScmPair(ScmSymbol("unquote-splicing"), Pair(x, ScmNil)) -> ScmConst(x)
 *)
@@ -243,7 +243,20 @@ match sexpr with
 | ScmPair(ScmSymbol("let"), ScmPair(ribs, ScmPair(body, ScmNil))) -> ScmPair((ScmPair(ScmSymbol("lambda"), ScmPair((get_all_vars ribs) ,ScmPair(body, ScmNil)))), (get_all_values ribs)) 
 | ScmPair(ScmSymbol("let*"), letStarBody) -> (macro_expand (expand_let_star_macro letStarBody))
 | ScmPair(ScmSymbol("letrec"), letRecBody) -> (macro_expand (expand_letrec_macro letRecBody))
+| ScmPair(ScmSymbol("quasiquote"), sexpr) -> (expand_quasiquote_macro sexpr)
 | _ -> sexpr
+
+and expand_quasiquote_macro = function
+| ScmPair(ScmSymbol("unquote"), ScmPair(sexpr, ScmNil)) -> (macro_expand sexpr)
+| ScmPair(ScmSymbol("unquote-splicing"), sexpr) -> ScmPair(ScmSymbol("quote"),ScmPair(ScmPair(ScmSymbol("unquote-splicing"), sexpr), ScmNil)) 
+| ScmNil -> ScmPair(ScmSymbol("quote"), ScmNil)
+| ScmSymbol(x) -> ScmPair(ScmSymbol("quote"), ScmSymbol(x))
+| ScmVector(x) -> ScmVector((List.map expand_quasiquote_macro x))
+| ScmPair(ScmPair(ScmSymbol("unquote-splicing"), sexpr), b) -> ScmPair(ScmSymbol("append"), ScmPair(sexpr, b))
+| ScmPair(a, b) -> ScmPair(ScmSymbol("cons"), ScmPair(a,b))
+| sexpr -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized- quasiquote macro")) (*fix error *)
+
+
 
 and expand_cond_macro = function
   | ScmNil -> ScmNil
