@@ -256,16 +256,16 @@ and expand_cond_macro = function
   | ScmNil -> ScmNil
   | ScmPair(ScmPair(ribTest, ScmPair(ScmSymbol("=>"), ribBody)), ribs) -> (
     let testBinding = ScmPair(ScmSymbol("value"), ScmPair(ribTest, ScmNil)) in
-    let fBinding = ScmPair(ScmSymbol("f"), ribBody) in
-    let restFunc = ScmPair(ScmSymbol("lambda"), ScmPair(ScmNil, (expand_cond_macro ribs))) in
+    let fBinding = ScmPair(ScmSymbol("f"), ScmPair(ScmPair(ScmSymbol("lambda"),ScmPair(ScmNil,ribBody)),ScmNil)) in
+    let restFunc = ScmPair(ScmSymbol("lambda"), ScmPair(ScmNil, ScmPair((expand_cond_macro ribs),ScmNil))) in
     let restBinding = ScmPair(ScmSymbol("rest"),ScmPair(restFunc, ScmNil)) in
-    let dit = ScmPair(ScmPair(ScmSymbol("f"), ScmNil), ScmSymbol("value")) in
+    let dit = ScmPair(ScmPair(ScmSymbol("f"), ScmNil), ScmPair(ScmSymbol("value"), ScmNil)) in
     let dif = ScmPair(ScmSymbol("rest"), ScmNil) in
     let ifState = ScmPair(ScmSymbol("if"), ScmPair(ScmSymbol("value"), ScmPair(dit,ScmPair(dif,ScmNil)))) in
     ScmPair(ScmSymbol("let"), ScmPair(ScmPair(testBinding, ScmPair(fBinding, ScmPair(restBinding, ScmNil))),ScmPair(ifState, ScmNil)))
-  )
-  | ScmPair(ScmPair(ScmSymbol("else"), body), _) -> ScmPair(ScmSymbol("begin"), body)
-  | ScmPair(ScmPair(ribTest, ribBody), ribs) -> ScmPair(ScmSymbol("if"), ScmPair(ribTest, ScmPair(ScmPair(ScmSymbol("begin"), ribBody), ScmPair((expand_cond_macro ribs), ScmNil))))
+    )
+    | ScmPair(ScmPair(ScmSymbol("else"), body), _) -> ScmPair(ScmSymbol("begin"), body)
+    | ScmPair(ScmPair(ribTest, ribBody), ribs) -> ScmPair(ScmSymbol("if"), ScmPair(ribTest, ScmPair(ScmPair(ScmSymbol("begin"), ribBody), ScmPair((expand_cond_macro ribs), ScmNil))))
   | sexpr -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized- cond macro")) (*fix error *)
 
 
