@@ -237,17 +237,20 @@ match sexpr with
 | ScmPair(ScmSymbol("let"), ScmPair(ribs, body)) -> ScmPair((ScmPair(ScmSymbol("lambda"), ScmPair((get_all_vars ribs) ,(macro_expand body)))), (get_all_values ribs)) 
 | ScmPair(ScmSymbol("let*"), letStarBody) -> (macro_expand (expand_let_star_macro letStarBody))
 | ScmPair(ScmSymbol("letrec"), letRecBody) -> (macro_expand (expand_letrec_macro letRecBody))
-| ScmPair(ScmSymbol("quasiquote"), sexpr) -> (expand_quasiquote_macro sexpr)
+| ScmPair(ScmSymbol("quasiquote"), ScmPair(sexpr, ScmNil)) -> (expand_quasiquote_macro sexpr)
 | _ -> sexpr
 
 and expand_quasiquote_macro = function
 | ScmPair(ScmSymbol("unquote"), ScmPair(sexpr, ScmNil)) -> (macro_expand sexpr)
 | ScmPair(ScmSymbol("unquote-splicing"), sexpr) -> ScmPair(ScmSymbol("quote"),ScmPair(ScmPair(ScmSymbol("unquote-splicing"), sexpr), ScmNil)) 
-| ScmNil -> ScmPair(ScmSymbol("quote"), ScmNil)
-| ScmSymbol(x) -> ScmPair(ScmSymbol("quote"), ScmSymbol(x))
-| ScmVector(x) -> ScmVector((List.map expand_quasiquote_macro x))
-| ScmPair(ScmPair(ScmSymbol("unquote-splicing"), sexpr), b) -> ScmPair(ScmSymbol("append"), ScmPair(sexpr, b))
-| ScmPair(a, b) -> ScmPair(ScmSymbol("cons"), ScmPair(a,b))
+| ScmNil -> ScmPair(ScmSymbol("quote"), ScmPair(ScmNil,ScmNil)) 
+| ScmSymbol(x) -> ScmPair(ScmSymbol("quote"), ScmPair(ScmSymbol(x), ScmNil)) 
+| ScmChar(x) -> ScmPair(ScmSymbol("quote"), ScmPair(ScmChar(x), ScmNil)) 
+| ScmString(x) -> ScmPair(ScmSymbol("quote"), ScmPair(ScmString(x), ScmNil)) 
+| ScmVector(x) -> ScmPair(ScmSymbol("list->vector"),ScmPair((expand_quasiquote_macro (list_to_proper_list x)), ScmNil)) 
+| ScmPair(ScmPair(ScmSymbol("unquote-splicing"), ScmPair(sexpr,ScmNil)), b) -> ScmPair(ScmSymbol("append"), ScmPair(sexpr, ScmPair((expand_quasiquote_macro b,ScmNil))))
+| ScmPair(a, ScmNil) -> ScmPair(ScmSymbol("cons"), ScmPair((expand_quasiquote_macro a),ScmPair((expand_quasiquote_macro ScmNil),ScmNil)))
+| ScmPair(a, b) -> ScmPair(ScmSymbol("cons"), ScmPair((expand_quasiquote_macro a),ScmPair((expand_quasiquote_macro b),ScmNil)))
 | sexpr -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized- quasiquote macro")) (*fix error *)
 
 
