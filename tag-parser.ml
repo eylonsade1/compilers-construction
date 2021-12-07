@@ -19,7 +19,7 @@ exception X_not_implemented;;
 
 let rec checkDup = function
 | [] -> false
-| hd::tl -> ((List.mem hd tl) || (checkDup tl))
+| hd::tl -> ((List.mem hd tl) || (checkDup tl));;
 
 let rec list_to_proper_list = function
 | [] -> ScmNil
