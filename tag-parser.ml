@@ -17,6 +17,10 @@ exception X_reserved_word of string;;
 exception X_proper_list_error;;
 exception X_not_implemented;;
 
+let rec checkDup = function
+| [] -> false
+| hd::tl -> ((List.mem hd tl) || (checkDup tl))
+
 let rec list_to_proper_list = function
 | [] -> ScmNil
 | hd::[] -> ScmPair (hd, ScmNil)
@@ -194,8 +198,15 @@ match sexpr with
           ScmNil -> ScmLambdaSimple([],(bodyParsing body))
           | ScmPair(_ ,_) -> 
             if (scm_is_list args)
-              then ScmLambdaSimple((List.map (fun (ar) -> (sexpr_to_string ar)) (scm_list_to_list args)), (bodyParsing body))
-              else ScmLambdaOpt((improper_to_list_without_last_arg args), (improper_tail args), (bodyParsing body))
+              then 
+                let argsStrings = (List.map (fun (ar) -> (sexpr_to_string ar)) (scm_list_to_list args)) in
+                if (checkDup argsStrings) then (raise (X_syntax_error (sexpr, "lambda cannot have duplicate args"))) 
+                else ScmLambdaSimple(argsStrings, (bodyParsing body))
+              else 
+                let argsStrings = (improper_to_list_without_last_arg args) in
+                let tailString = (improper_tail args) in
+                if(checkDup (tailString::argsStrings)) then (raise (X_syntax_error (sexpr, "lambda cannot have duplicate args"))) 
+                else ScmLambdaOpt(argsStrings, tailString, (bodyParsing body))
           | ScmSymbol(sym) -> ScmLambdaOpt([], sym, (bodyParsing body))
           | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized")))
 | ScmPair(ScmSymbol("define"), ScmPair(ScmSymbol(var), ScmPair(x , ScmNil))) -> ScmDef((tag_parse_expression (ScmSymbol(var))), (tag_parse_expression x))
