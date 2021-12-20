@@ -102,12 +102,28 @@ module Semantic_Analysis : SEMANTIC_ANALYSIS = struct
         | Some(major, minor) -> VarBound(name, major, minor))
     | Some minor -> VarParam(name, minor);;
 
+    let getString = function
+    |ScmVar(str) -> str
+    |_ -> "";;
+
   (* run this first! *)
   let annotate_lexical_addresses pe = 
    let rec run pe params env =
-      raise X_not_yet_implemented 
+      match pe with
+      | ScmConst(sexpr) -> ScmConst'(sexpr)
+      | ScmVar(str) -> ScmVar'((tag_lexical_address_for_var str params env))
+      | ScmIf(expr1,expr2,expr3) -> ScmIf'((run expr1 params env),(run expr2 params env),(run expr2 params env))
+      | ScmSeq(exprList) -> ScmSeq'((List.map (fun exp -> (run exp params env)) exprList))
+      | ScmSet(expr1, expr2) -> ScmSet'((tag_lexical_address_for_var (getString expr1) params env),(run expr2 params env))
+      | ScmDef(expr1, expr2) -> ScmDef'((tag_lexical_address_for_var (getString expr1) params env),(run expr2 params env))
+      | ScmOr(exprList) -> ScmOr'((List.map (fun exp -> (run exp params env)) exprList))
+      | ScmLambdaSimple(stringList, expr) -> ScmLambdaSimple'(stringList, (run expr stringList (params::env)))
+      | ScmLambdaOpt(stringList, str, expr) -> ScmLambdaOpt'(stringList, str, (run expr (List.append stringList [str]) (params::env)))
+      | ScmApplic(operator, exprList) -> ScmApplic'((run operator params env), (List.map (fun exp -> (run exp params env)) exprList))
    in 
    run pe [] [];;
+
+     
 
   let rec rdc_rac s =
     match s with
