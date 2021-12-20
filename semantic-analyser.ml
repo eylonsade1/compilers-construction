@@ -162,22 +162,27 @@ module Semantic_Analysis : SEMANTIC_ANALYSIS = struct
 
 
   (* boxing *)
-  let find_reads name enclosing_lambda expr = raise X_not_yet_implemented 
+  let rec find_reads name enclosing_lambda expr =
+    match expr with
+    | ScmConst'(ScmVoid) -> _
+    | ScmSeq'(exprList) -> (List.map box_set exprList)
+    | ScmConst'(exp) ->
+    
 
-  let rec box_set expr = raise X_not_yet_implemented 
-    (*function
+  let rec box_set expr = (*raise X_not_yet_implemented *)
+    function
     | ScmConst'(sexpr) -> ScmConst'(sexpr)
     | ScmVar'(var') -> ScmVar'(var')
     | ScmIf'(expr1, expr2, expr3) -> ScmIf'(expr1, expr2, expr3)
-    | ScmSeq' of expr' list
-    | ScmSet' of var' * expr'
-    | ScmDef' of var' * expr'
-    | ScmOr' of expr' list
-    | ScmLambdaSimple' of string list * expr'
-    | ScmLambdaOpt' of string list * string * expr'
-    | ScmApplic' of expr' * (expr' list)
-    | ScmApplicTP' of expr' * (expr' list)
-    | _ -> raise X_this_should_not_happen*)
+    | ScmSeq'(exprList) -> ScmSeq'(exprList)
+    | ScmSet'(var', expr') -> ScmSet'(var', expr')
+    | ScmDef'(var', expr') -> ScmDef'(var', expr')
+    | ScmOr'(exprList) -> ScmOr'(exprList)
+    | ScmLambdaSimple'(stringList, expr') -> ScmLambdaSimple'(stringList, expr')
+    | ScmLambdaOpt'(stringList, str, expr') -> ScmLambdaOpt'(stringList, str, expr')
+    | ScmApplic'(expr', exprList) -> ScmApplic'(expr', exprList)
+    | ScmApplicTP'(expr', exprList) -> ScmApplicTP'(expr', exprList)
+    | _ -> raise X_this_should_not_happen
 
   let run_semantics expr =
     box_set
