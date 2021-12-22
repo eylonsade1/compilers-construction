@@ -40,8 +40,6 @@ match v1, v2 with
        index1 = index2 && (String.equal name1 name2)
   | _ -> false
 
-let list_eq eq l1 l2 = (List.length l1) = (List.length l2) && List.for_all2 eq l1 l2;;
-
 let rec expr'_eq e1 e2 =
   match e1, e2 with
   | ScmConst' (sexpr1), ScmConst' (sexpr2) -> sexpr_eq sexpr1 sexpr2
@@ -50,47 +48,23 @@ let rec expr'_eq e1 e2 =
                                             (expr'_eq dit1 dit2) &&
                                               (expr'_eq dif1 dif2)
   | (ScmSeq' (exprs1), ScmSeq' (exprs2) | ScmOr' (exprs1), ScmOr' (exprs2)) ->
-        list_eq expr'_eq exprs1 exprs2
+        List.for_all2 expr'_eq exprs1 exprs2
   | (ScmSet' (var1, val1), ScmSet' (var2, val2) | ScmDef' (var1, val1), ScmDef' (var2, val2)) ->
         (var_eq var1 var2) && (expr'_eq val1 val2)
   | ScmLambdaSimple' (vars1, body1), ScmLambdaSimple' (vars2, body2) ->
-     (list_eq String.equal vars1 vars2) && (expr'_eq body1 body2)
+     (List.for_all2 String.equal vars1 vars2) && (expr'_eq body1 body2)
   | ScmLambdaOpt' (vars1, var1, body1), ScmLambdaOpt' (vars2, var2, body2) ->
      (String.equal var1 var2) &&
-       (list_eq String.equal vars1 vars2) && (expr'_eq body1 body2)
+       (List.for_all2 String.equal vars1 vars2) && (expr'_eq body1 body2)
   | ScmApplic' (e1, args1), ScmApplic' (e2, args2) ->
-     (expr'_eq e1 e2) && (list_eq expr'_eq args1 args2)
+     (expr'_eq e1 e2) && (List.for_all2 expr'_eq args1 args2)
   | ScmApplicTP' (e1, args1), ScmApplicTP' (e2, args2) ->
-      (expr'_eq e1 e2) && (list_eq expr'_eq args1 args2)
+      (expr'_eq e1 e2) && (List.for_all2 expr'_eq args1 args2)
   | ScmBox' (v1), ScmBox' (v2) -> var_eq v1 v2
   | ScmBoxGet' (v1), ScmBoxGet' (v2) -> var_eq v1 v2
   | ScmBoxSet' (v1, e1), ScmBoxSet' (v2, e2) -> (var_eq v1 v2) && (expr'_eq e1 e2)
   | _ -> false;;
 
-let unannotate_lexical_address = function
-| (VarFree name | VarParam (name, _) | VarBound (name, _, _)) -> ScmVar name
-
-let rec unanalyze expr' =
-match expr' with
-  | ScmConst' s -> ScmConst(s)
-  | ScmVar' var -> unannotate_lexical_address var
-  | ScmBox' var -> ScmApplic(ScmVar "box", [unannotate_lexical_address var])
-  | ScmBoxGet' var -> unannotate_lexical_address var
-  | ScmBoxSet' (var, expr') -> ScmSet (unannotate_lexical_address var, unanalyze expr')
-  | ScmIf' (test, dit, dif) -> ScmIf (unanalyze test, unanalyze dit, unanalyze dif)
-  | ScmSeq' expr's -> ScmSeq (List.map unanalyze expr's)
-  | ScmSet' (var, expr') -> ScmSet (unannotate_lexical_address var, unanalyze expr')
-  | ScmDef' (var, expr') -> ScmDef (unannotate_lexical_address var, unanalyze expr')
-  | ScmOr' expr's -> ScmOr (List.map unanalyze expr's)
-  | ScmLambdaSimple' (params, expr') ->
-        ScmLambdaSimple (params, unanalyze expr')
-  | ScmLambdaOpt'(params, param, expr') ->
-        ScmLambdaOpt (params, param, unanalyze expr')
-  | (ScmApplic' (expr', expr's) | ScmApplicTP' (expr', expr's)) ->
-        ScmApplic (unanalyze expr', List.map unanalyze expr's);;
-
-let string_of_expr' expr' =
-    string_of_expr (unanalyze expr');;
 
 module type SEMANTIC_ANALYSIS = sig
   val annotate_lexical_addresses : expr -> expr'
@@ -128,12 +102,28 @@ module Semantic_Analysis : SEMANTIC_ANALYSIS = struct
         | Some(major, minor) -> VarBound(name, major, minor))
     | Some minor -> VarParam(name, minor);;
 
+    let getString = function
+    |ScmVar(str) -> str
+    |_ -> "";;
+
   (* run this first! *)
   let annotate_lexical_addresses pe = 
    let rec run pe params env =
-      raise X_not_yet_implemented 
+      match pe with
+      | ScmConst(sexpr) -> ScmConst'(sexpr)
+      | ScmVar(str) -> ScmVar'((tag_lexical_address_for_var str params env))
+      | ScmIf(expr1,expr2,expr3) -> ScmIf'((run expr1 params env),(run expr2 params env),(run expr2 params env))
+      | ScmSeq(exprList) -> ScmSeq'((List.map (fun exp -> (run exp params env)) exprList))
+      | ScmSet(expr1, expr2) -> ScmSet'((tag_lexical_address_for_var (getString expr1) params env),(run expr2 params env))
+      | ScmDef(expr1, expr2) -> ScmDef'((tag_lexical_address_for_var (getString expr1) params env),(run expr2 params env))
+      | ScmOr(exprList) -> ScmOr'((List.map (fun exp -> (run exp params env)) exprList))
+      | ScmLambdaSimple(stringList, expr) -> ScmLambdaSimple'(stringList, (run expr stringList (params::env)))
+      | ScmLambdaOpt(stringList, str, expr) -> ScmLambdaOpt'(stringList, str, (run expr (List.append stringList [str]) (params::env)))
+      | ScmApplic(operator, exprList) -> ScmApplic'((run operator params env), (List.map (fun exp -> (run exp params env)) exprList))
    in 
    run pe [] [];;
+
+  (* [1,2,3]  -> ([1,2],3) *)   
 
   let rec rdc_rac s =
     match s with
@@ -142,20 +132,57 @@ module Semantic_Analysis : SEMANTIC_ANALYSIS = struct
        let (rdc, rac) = rdc_rac s
        in (e :: rdc, rac)
     | _ -> raise X_this_should_not_happen;;
-  
+
   (* run this second! *)
   let annotate_tail_calls pe =
    let rec run pe in_tail =
-      raise X_not_yet_implemented 
-   in 
-   run pe false;;
+    match pe with
+    | ScmConst'(sexpr) -> ScmConst'(sexpr)
+    | ScmVar'(var') -> ScmVar'(var')
+    | ScmBox'(var') -> ScmBox'(var')
+    | ScmBoxGet'(var') -> ScmBoxGet'(var')
+    | ScmBoxSet'(var', expr') -> ScmBoxSet'(var', (run expr' false))
+    | ScmIf'(expr1, expr2, expr3) -> ScmIf'((run expr1 false), (run expr2 in_tail), (run expr3 in_tail))
+    | ScmSeq'(exprList) -> ScmSeq'((seqTail (rdc_rac exprList) in_tail))
+    | ScmSet'(var', expr') -> ScmSet'(var',(run expr' false))
+    | ScmDef'(var', expr') -> ScmDef'(var', (run expr' in_tail))
+    | ScmOr'(exprList) -> ScmOr'((seqTail (rdc_rac exprList) in_tail))
+    | ScmLambdaSimple'(stringList, expr') -> ScmLambdaSimple'(stringList, (run expr' true)) (* check if there is error*)
+    | ScmLambdaOpt'(stringList, str, expr') -> ScmLambdaOpt'(stringList, str, (run expr' true))
+    | ScmApplic'(op, exprList) -> (
+        match in_tail with
+            false -> ScmApplic'((run op false),((seqTail (rdc_rac exprList) false)))
+          | true -> ScmApplicTP'((run op false),((seqTail (rdc_rac exprList) true))))
+    | ScmApplicTP'(op,expList) -> ScmApplicTP'(op,expList)
+   and seqTail tup in_tail =
+    match tup with
+      |(lst,item)-> (List.append (List.map (fun exp -> (run exp false)) lst) [(run item in_tail)])
+       in
+   run pe false
+
 
   (* boxing *)
+  let rec find_reads name enclosing_lambda expr =
+    match expr with
+    | ScmConst'(ScmVoid) -> _
+    | ScmSeq'(exprList) -> (List.map box_set exprList)
+    | ScmConst'(exp) ->
+    
 
-  let find_reads name enclosing_lambda expr = raise X_not_yet_implemented 
-
-
-  let rec box_set expr = raise X_not_yet_implemented
+  let rec box_set expr = (*raise X_not_yet_implemented *)
+    function
+    | ScmConst'(sexpr) -> ScmConst'(sexpr)
+    | ScmVar'(var') -> ScmVar'(var')
+    | ScmIf'(expr1, expr2, expr3) -> ScmIf'(expr1, expr2, expr3)
+    | ScmSeq'(exprList) -> ScmSeq'(exprList)
+    | ScmSet'(var', expr') -> ScmSet'(var', expr')
+    | ScmDef'(var', expr') -> ScmDef'(var', expr')
+    | ScmOr'(exprList) -> ScmOr'(exprList)
+    | ScmLambdaSimple'(stringList, expr') -> ScmLambdaSimple'(stringList, expr')
+    | ScmLambdaOpt'(stringList, str, expr') -> ScmLambdaOpt'(stringList, str, expr')
+    | ScmApplic'(expr', exprList) -> ScmApplic'(expr', exprList)
+    | ScmApplicTP'(expr', exprList) -> ScmApplicTP'(expr', exprList)
+    | _ -> raise X_this_should_not_happen
 
   let run_semantics expr =
     box_set
