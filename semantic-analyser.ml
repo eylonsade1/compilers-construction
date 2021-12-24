@@ -124,7 +124,7 @@ module Semantic_Analysis : SEMANTIC_ANALYSIS = struct
       match pe with
       | ScmConst(sexpr) -> ScmConst'(sexpr)
       | ScmVar(str) -> ScmVar'((tag_lexical_address_for_var str params env))
-      | ScmIf(expr1,expr2,expr3) -> ScmIf'((run expr1 params env),(run expr2 params env),(run expr2 params env))
+      | ScmIf(expr1,expr2,expr3) -> ScmIf'((run expr1 params env),(run expr2 params env),(run expr3 params env))
       | ScmSeq(exprList) -> ScmSeq'((List.map (fun exp -> (run exp params env)) exprList))
       | ScmSet(expr1, expr2) -> ScmSet'((tag_lexical_address_for_var (getString expr1) params env),(run expr2 params env))
       | ScmDef(expr1, expr2) -> ScmDef'((tag_lexical_address_for_var (getString expr1) params env),(run expr2 params env))
@@ -154,20 +154,22 @@ module Semantic_Analysis : SEMANTIC_ANALYSIS = struct
     | ScmBoxGet'(var') -> ScmBoxGet'(var')
     | ScmBoxSet'(var', expr') -> ScmBoxSet'(var', (run expr' false))
     | ScmIf'(expr1, expr2, expr3) -> ScmIf'((run expr1 false), (run expr2 in_tail), (run expr3 in_tail))
-    | ScmSeq'(exprList) -> ScmSeq'((seqTail (rdc_rac exprList) in_tail))
+    | ScmSeq'(exprList) -> ScmSeq'((seqTail exprList in_tail))
     | ScmSet'(var', expr') -> ScmSet'(var',(run expr' false))
     | ScmDef'(var', expr') -> ScmDef'(var', (run expr' in_tail))
-    | ScmOr'(exprList) -> ScmOr'((seqTail (rdc_rac exprList) in_tail))
+    | ScmOr'(exprList) -> ScmOr'((seqTail exprList in_tail))
     | ScmLambdaSimple'(stringList, expr') -> ScmLambdaSimple'(stringList, (run expr' true)) (* check if there is error*)
     | ScmLambdaOpt'(stringList, str, expr') -> ScmLambdaOpt'(stringList, str, (run expr' true))
     | ScmApplic'(op, exprList) -> (
         match in_tail with
-            false -> ScmApplic'((run op false),((seqTail (rdc_rac exprList) false)))
-          | true -> ScmApplicTP'((run op false),((seqTail (rdc_rac exprList) true))))
+            false -> ScmApplic'((run op false),((seqTail exprList false)))
+          | true -> ScmApplicTP'((run op false),((seqTail exprList true))))
     | ScmApplicTP'(op,expList) -> ScmApplicTP'(op,expList)
    and seqTail tup in_tail =
     match tup with
-      |(lst,item)-> (List.append (List.map (fun exp -> (run exp false)) lst) [(run item in_tail)])
+      |[] -> []
+      |list-> (match (rdc_rac list) with
+        | (lst,item) -> (List.append (List.map (fun exp -> (run exp false)) lst) [(run item in_tail)]))
        in
    run pe false;;
 
