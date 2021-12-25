@@ -163,7 +163,7 @@ module Semantic_Analysis : SEMANTIC_ANALYSIS = struct
     | ScmApplic'(op, exprList) -> (
         match in_tail with
             false -> ScmApplic'((run op false),((seqTail exprList false)))
-          | true -> ScmApplicTP'((run op false),((seqTail exprList true))))
+          | true -> ScmApplicTP'((run op false),((seqTail exprList false))))
     | ScmApplicTP'(op,expList) -> ScmApplicTP'(op,expList)
    and seqTail tup in_tail =
     match tup with
@@ -182,8 +182,8 @@ module Semantic_Analysis : SEMANTIC_ANALYSIS = struct
   let checkIfVar name isRead isInner= 
     let rec runCheck isBound env expr = 
       (match expr with
-     | ScmVar'(VarBound(str,minor,major)) -> if isInner then if isRead then if (str = name) then [env] else [] else [] else []
-     | ScmVar'(VarParam(str,integer)) -> if isRead then if (str = name) then [env] else [] else []
+     | ScmVar'(VarBound(str,minor,major)) -> if isBound then if isInner then if isRead then if (str = name) then [env] else [] else [] else [] else [] (*added check if its bound*)
+     | ScmVar'(VarParam(str,integer)) -> if isBound then if isRead then if (str = name) then [env] else [] else [] else [] (*added check if its bound*)
      | ScmIf'(expr1,expr2,expr3) -> (runCheck isBound env expr1)@((runCheck isBound env expr2)@(runCheck isBound env expr3))
      | ScmSeq'(exprList) -> (List.fold_right List.append (List.map (fun exp -> (runCheck isBound env exp)) exprList) [])
      | ScmSet'(var', expr') -> if isRead then (runCheck isBound env expr') else 
@@ -224,15 +224,15 @@ module Semantic_Analysis : SEMANTIC_ANALYSIS = struct
   let shouldBox env name body = 
     let readerChecker = (checkIfVar name true false) in
     let writerChecker = (checkIfVar name false false) in
-    let readExists = (readerChecker false body body) in
-    (*let a = Printf.printf "\n-----------------read-----------------------\n" in
-    let a = Printf.printf "%B" (readExists!=[]) in*)
-    let writeExists = (writerChecker false body body) in
+    let readExists = (readerChecker true body body) in
+    (*let a = Printf.printf "\n-----------------read-----------------------\n" 
+    let a = Printf.printf "%B" (readExists!=[]) in *)
+    let writeExists = (writerChecker true body body) in
     (*let a = Printf.printf "\n-----------------write-----------------------\n" in
-    let a = Printf.printf "%B" (writeExists!=[]) in*)
+    let a = Printf.printf "%B" (writeExists!=[]) in *)
     let innerReads = ((checkIfVar name true true) false body body) in
     (*let a = Printf.printf "\n-----------------inner read-----------------------\n" in
-    let a = Printf.printf "%B" (innerReads!=[]) in*)
+    let a = Printf.printf "%B" (innerReads!=[]) in *)
     let innerWrites = ((checkIfVar name false true) false body body) in
     (*let a = Printf.printf "\n-----------------inner writes-----------------------\n" in
     let a = Printf.printf "%B" (innerWrites!=[]) in *)
@@ -241,22 +241,23 @@ module Semantic_Analysis : SEMANTIC_ANALYSIS = struct
     let differentClosures = (ormap (fun x -> (ormap (fun y->x!=y) unique_innerWrites)) unique_innerReads) in
     (readExists!= [] && innerWrites != []) || (writeExists!=[] && innerReads != []) || differentClosures
 
+  let rec find_index name index= function 
+      | x::xs -> if x=name then index else (find_index name (index+1) xs)
+      | [] -> -1;;
 
   let makeSet stringList lambda body = 
     let shouldBoxArgs = (List.map (fun name -> (shouldBox lambda name body)) stringList) in
-    let index = -1 in
     let makeParamBox name newBody flag = 
-      let index = index + 1 in (*check how to increment index*)
+      let index = (find_index name 0 stringList) in
       if flag then
-       match newBody with
+       (match newBody with
        | ScmSeq'(exprList) -> ScmSeq'(ScmSet'(VarParam(name, index),ScmBox'(VarParam(name,index)))::exprList)
-       | seq -> ScmSeq'(ScmSet'(VarParam(name, index),ScmBox'(VarParam(name,index)))::[seq]) else body in
-    let newBody = (List.fold_right2 (fun flag name body -> if flag then (replaceBox name body) else body) shouldBoxArgs stringList body) in
-    let newBody = (List.fold_right2 (fun flag name body -> (makeParamBox name body flag)) shouldBoxArgs stringList newBody) in
-    newBody;;  
+       | seq -> ScmSeq'(ScmSet'(VarParam(name, index),ScmBox'(VarParam(name,index)))::[seq])) else body in
+    let newBody1 = (List.fold_right2 (fun flag name body1 -> (makeParamBox name (if flag then (replaceBox name body1) else body1) flag)) shouldBoxArgs stringList body) in
+    newBody1;;  (*doesnt work together*)
     
 
-  let rec box_set expr =
+  let rec box_set expr =  
     match expr with
     | ScmConst'(sexpr) -> ScmConst'(sexpr)
     | ScmVar'(var') -> ScmVar'(var')
