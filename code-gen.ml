@@ -165,8 +165,32 @@ type expr' =
       2. remove duplicates from the collection of constants- leave the first copy of each one
       3. convert to list (string, int)
    *)
-  let make_fvars_tbl asts = raise X_not_yet_implemented;;
 
+  let rec find_free_vars = function
+    | ScmConst'(sexpr) -> []
+    | ScmVar'(var) -> []
+    | ScmBox'(var) -> []
+    | ScmBoxGet'(var) -> []
+    | ScmBoxSet'(var, expr) -> (find_free_vars expr)
+    | ScmIf'(test, dit, dif) -> (find_free_vars test) @ (find_free_vars dit) @ (find_free_vars dif)
+    | ScmSeq'(exprList) -> (List.fold_left (fun init ex -> init @ (find_free_vars ex)) [] exprList)
+    | ScmSet'(var, expr) -> (find_free_vars expr)
+    | ScmDef'(VarFree(var), expr) -> [var]
+    | ScmDef'(var, expr) -> (find_free_vars expr)
+    | ScmOr'(exprList) -> (List.fold_left (fun init ex -> init @ (find_free_vars ex)) [] exprList)
+    | ScmLambdaSimple'(stringList, expr) -> (find_free_vars expr)
+    | ScmLambdaOpt'(stringList, str, expr) -> (find_free_vars expr)
+    | ScmApplic'(expr, exprList) -> (find_free_vars expr) @ (List.fold_left (fun init ex -> init @ (find_free_vars ex)) [] exprList)
+    | ScmApplicTP'(expr, exprList) -> (find_free_vars expr) @ (List.fold_left (fun init ex -> init @ (find_free_vars ex)) [] exprList);;
+
+  let make_fvars_tbl asts =
+    let fvars = (List.fold_left (fun init ex -> init @ (find_free_vars ex)) [] asts) in
+    let no_duplicates = (List.fold_left (fun init hd ->  if (List.mem hd init) then init else init @ [hd]) [] fvars) in
+    let fvars_index = (List.fold_left (fun init ex -> init @ [((last_element init) + 1)]) [0] no_duplicates) in
+    let fvars_index = (List.rev (List.tl (List.rev fvars_index))) in
+    let fvars_with_index = (List.fold_left2 (fun init ex size -> init @ [(ex, size)]) [] no_duplicates fvars_index) in
+    fvars_with_index
+    ;;
   let generate consts fvars e = raise X_not_yet_implemented;;
 end;;
 
