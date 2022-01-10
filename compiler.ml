@@ -132,6 +132,7 @@ try
 
   (* load the input file and stdlib *)
   let code =  (file_to_string "stdlib.scm") ^ (file_to_string infile) in
+  (* let code =  (file_to_string "stdlib.scm") in *)
 
   (* generate asts for all the code *)
   let asts = string_to_asts code in

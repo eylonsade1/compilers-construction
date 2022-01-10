@@ -93,7 +93,7 @@ type expr' =
       | ScmVector(list) -> (List.fold_left (fun init ex -> init @ (expand_if_needed ex)) [] list)
       | ScmPair(car, cdr) -> (expand_if_needed car) @ (expand_if_needed cdr)
       | ScmSymbol(x) -> [ScmString(x)]
-      | _ -> []
+      | _ -> [] 
     
     and expand_if_needed = function
       | ScmNil -> [ScmNil]
@@ -102,9 +102,9 @@ type expr' =
       | ScmChar(ch) -> [ScmChar(ch)]
       | ScmNumber(x) -> [ScmNumber(x)]
       | ScmString(s) -> [ScmString(s)]
-      | ScmPair(car, cdr) -> (expand_if_needed car) @ (expand_if_needed cdr)
+      | ScmPair(car, cdr) -> (expand_if_needed car) @ ((expand_if_needed cdr) @ [ScmPair(car, cdr)])
       | ScmSymbol(x) -> [ScmString(x)] 
-      | ScmVector(list) -> (List.fold_left (fun init ex -> init @ (expand_if_needed ex)) [] list)
+      | ScmVector(list) -> (List.fold_left (fun init ex -> init @ (expand_if_needed ex)) [] list) @ [ScmVector(list)]
       ;;
 
   let pack_with_size = function
@@ -154,8 +154,8 @@ type expr' =
     let consts_with_opening_four = opening_four @ consts_list in 
     let consts_expanded = (List.fold_left (fun init ex -> init @ ((expand_consts ex) @ [ex])) [] consts_with_opening_four) in 
     let consts_no_duplicates = (List.fold_left (fun init hd ->  if (List.mem hd init) then init else init @ [hd]) [] consts_expanded) in
-    let size_list = (List.fold_left (fun init ex -> init @ [((last_element init) + (pack_with_size ex))]) [(-1)] consts_no_duplicates) in
-    let size_list = (List.tl size_list) in
+    let size_list = (List.fold_left (fun init ex -> init @ [((last_element init) + (pack_with_size ex))]) [0] consts_no_duplicates) in
+    let size_list = (List.rev (List.tl (List.rev size_list))) in
     let consts_with_size = (List.fold_left2 (fun init ex size -> init @ [[ex, size]]) [] consts_no_duplicates size_list) in
     let consts_tbl = (List.fold_left (fun init ex -> init @ (pack_with_strings ex init)) [] consts_with_size) in
     consts_tbl
