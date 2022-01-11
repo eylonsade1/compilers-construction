@@ -32,28 +32,6 @@ module type CODE_GEN = sig
 end;;
 
 module Code_Gen : CODE_GEN = struct
-(*
-type var' = 
-  | VarFree of string
-  | VarParam of string * int
-  | VarBound of string * int * int;;
-
-type expr' =
-  | ScmConst' of sexpr
-  | ScmVar' of var'
-  | ScmBox' of var'
-  | ScmBoxGet' of var'
-  | ScmBoxSet' of var' * expr'
-  | ScmIf' of expr' * expr' * expr'
-  | ScmSeq' of expr' list
-  | ScmSet' of var' * expr'
-  | ScmDef' of var' * expr'
-  | ScmOr' of expr' list
-  | ScmLambdaSimple' of string list * expr'
-  | ScmLambdaOpt' of string list * string * expr'
-  | ScmApplic' of expr' * (expr' list)
-  | ScmApplicTP' of expr' * (expr' list);;
-*)
 
     (* 
       1. go over the Sexpr and collect all constants 
@@ -185,12 +163,89 @@ type expr' =
 
   let make_fvars_tbl asts =
     let fvars = (List.fold_left (fun init ex -> init @ (find_free_vars ex)) [] asts) in
+    let always_have = ["apply"; "car"; "cdr"; "cons"; "set-car!"; "set-cdr!"] in
+    let fvars = always_have @ fvars in
     let no_duplicates = (List.fold_left (fun init hd ->  if (List.mem hd init) then init else init @ [hd]) [] fvars) in
     let fvars_index = (List.fold_left (fun init ex -> init @ [((last_element init) + 1)]) [0] no_duplicates) in
     let fvars_index = (List.rev (List.tl (List.rev fvars_index))) in
     let fvars_with_index = (List.fold_left2 (fun init ex size -> init @ [(ex, size)]) [] no_duplicates fvars_index) in
     fvars_with_index
     ;;
+
+  let make_counter () =
+    let x = ref 0 in
+    let get () = !x in
+    let inc () = x := !x +1 in
+    (get, inc);;
+
+  let counter = make_counter();;
+
+  let get_counter () = 
+    begin
+    (snd counter)();
+    (Int.to_string ((fst counter)()))
+    end;;
+
+  let get_const_var c consts_tbl =
+    let const_row = (List.find (fun (const, _, _) -> sexpr_eq const c) consts_tbl) in
+    let offset = ((fun (_, off, _) -> off) const_row) in
+    "mov rax, const_tbl+" ^ offset ^ "\n";;
+ 
+  let find_index_in_tbl tbl name =
+    let fvar = (List.find (fun (var, index) -> name = var) tbl) in
+    ((snd fvar)());;
+
+  let get_Fvar name fvar_tbl =
+    let index = (find_index_in_tbl fvar_tbl name) in
+    "mov rax, qword [fvar+" ^ index ^ "*WORD_SIZE]\n";;
+
+  let set_Fvar var fvar_tbl = 
+    let str = "mov qword [" ^ (find_index_in_tbl fvar_tbl var) ^ "], rax\n" in
+    str ^ "mov rax, .void\n";;
+
+  let set_var_param minor = 
+    let str = "mov qword [rbp + 8 ∗ (4 + " ^ minor ^ ")], rax\n" in
+    str ^ "mov rax, .void\n";;
+
+  let get_bound_var minor major = 
+    let str = "mov rax, qword [rbp + WORD_SIZE ∗ 2]\n" in
+    let str = str ^ "mov rax, qword [rax + WORD_SIZE ∗ " ^ major ^ "]\n" in
+    str ^ "mov rax, qword [rax + WORD_SIZE ∗ " ^ minor ^ "]\n";;
+
+  let set_bound_var minor major = 
+    let str = "mov rbx, qword [rbp + WORD_SIZE ∗ 2]\n" in
+    let str = str ^ "mov rbx, qword [rbx + WORD_SIZE ∗ " ^ major ^ "]\n" in 
+    let str = str ^ "mov qword [rbx + WORD_SIZE ∗ " ^ minor ^ "], rax\n" in
+    str ^ "mov rax, .void\n";;
+    
+  let generate_or strList = 
+    let orStr = "cmp rax, sob_false\njne Lexit" ^ (get_counter()) ^ "\n" in
+    (List.fold_left (fun init str -> init ^ orStr) "" strList);;
+(*
+    generate define == generate set
+*)
+  let rec generate_helper consts fvars = function
+    | ScmConst'(sexpr) -> (get_const_var sexpr consts)
+    | ScmVar'(VarFree(var)) -> (get_Fvar var fvars)
+    | ScmVar'(VarParam(_, minor)) -> "mov rax, qword [rbp + WORD_SIZE ∗ (4 + " ^ (Int.to_string minor) ^ ")]\n"
+    | ScmVar'(VarBound(_, major, minor)) -> (get_bound_var (Int.to_string minor) (Int.to_string major))
+    | ScmBox'(var) -> ""
+    | ScmBoxGet'(var) -> ""
+    | ScmBoxSet'(var, expr) -> ""
+    | ScmIf'(test, dit, dif) -> ""
+    | ScmSeq'(exprList) -> (List.fold_left (fun init x -> init ^ (generate_helper consts fvars x)) "" exprList)
+    | ScmSet'(VarParam(_, minor), expr) -> (generate_helper consts fvars expr) ^ (set_var_param (Int.to_string minor))
+    | ScmSet'(VarBound(_, major, minor), expr) -> (generate_helper consts fvars expr) ^ (set_bound_var (Int.to_string minor) (Int.to_string major))
+    | ScmSet'(VarFree(var), expr) -> (generate_helper consts fvars expr) ^ (set_Fvar var fvars)
+    | ScmDef'(var, expr) -> ""
+    | ScmOr'(exprList) -> (generate_or (List.map (fun x -> generate_helper consts fvars x) exprList))
+    | ScmLambdaSimple'(stringList, expr) -> ""
+    | ScmLambdaOpt'(stringList, str, expr) -> ""
+    | ScmApplic'(expr, exprList) -> ""
+    | ScmApplicTP'(expr, exprList) -> "";;
+  
+
   let generate consts fvars e = raise X_not_yet_implemented;;
+  
 end;;
 
