@@ -187,13 +187,13 @@ module Code_Gen : CODE_GEN = struct
     end;;
 
   let get_const_var c consts_tbl =
-    let const_row = (List.find (fun (const, _, _) -> sexpr_eq const c) consts_tbl) in
-    let offset = ((fun (_, off, _) -> off) const_row) in
-    "mov rax, const_tbl+" ^ offset ^ "\n";;
+    let const_row = (List.find (fun (const,(_, _)) -> sexpr_eq const c) consts_tbl) in
+    let offset = ((fun (_, (off, _)) -> off) const_row) in
+    "mov rax, const_tbl+" ^ (Int.to_string offset) ^ "\n";;
  
   let find_index_in_tbl tbl name =
     let fvar = (List.find (fun (var, index) -> name = var) tbl) in
-    ((snd fvar)());;
+    (Int.to_string (snd fvar));;
 
   let get_Fvar name fvar_tbl =
     let index = (find_index_in_tbl fvar_tbl name) in
@@ -246,8 +246,8 @@ module Code_Gen : CODE_GEN = struct
     | ScmVar'(VarParam(_, minor)) -> "mov rax, qword [rbp + WORD_SIZE ∗ (4 + " ^ (Int.to_string minor) ^ ")]\n"
     | ScmVar'(VarBound(_, major, minor)) -> (get_bound_var (Int.to_string minor) (Int.to_string major))
     | ScmBox'(var) -> ""
-    | ScmBoxGet'(var) -> (generate_helper consts fvars var) ^ "mov rax, qword [rax]\n"
-    | ScmBoxSet'(var, expr) -> (generate_box_set (generate_helper consts fvars expr) (generate_helper consts fvars var))
+    | ScmBoxGet'(var) -> (generate_helper consts fvars (ScmVar'(var))) ^ "mov rax, qword [rax]\n"
+    | ScmBoxSet'(var, expr) -> (generate_box_set (generate_helper consts fvars expr) (generate_helper consts fvars (ScmVar'(var))))
     | ScmIf'(test, dit, dif) -> (generate_if (generate_helper consts fvars test) (generate_helper consts fvars dit) (generate_helper consts fvars dif))
     | ScmSeq'(exprList) -> (List.fold_left (fun init x -> init ^ (generate_helper consts fvars x)) "" exprList)
     | ScmSet'(VarParam(_, minor), expr) -> (generate_helper consts fvars expr) ^ (set_var_param (Int.to_string minor))
@@ -261,7 +261,8 @@ module Code_Gen : CODE_GEN = struct
     | ScmApplicTP'(expr, exprList) -> "";;
   
 
-  let generate consts fvars e = raise X_not_yet_implemented;;
+  let generate consts fvars e = 
+    (generate_helper consts fvars e);;
   
 end;;
 
