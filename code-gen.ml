@@ -219,8 +219,24 @@ module Code_Gen : CODE_GEN = struct
     str ^ "mov rax, .void\n";;
     
   let generate_or strList = 
-    let orStr = "cmp rax, sob_false\njne Lexit" ^ (get_counter()) ^ "\n" in
-    (List.fold_left (fun init str -> init ^ orStr) "" strList);;
+    let index = (get_counter()) in
+    let orStr = "cmp rax, .false\njne Lexit" ^ index ^ "\n" in
+    let ret = (List.fold_left (fun init str -> init ^ str ^ orStr) "" strList) in
+    let ret = (String.sub ret 0 ((String.length ret) - (String.length orStr))) in 
+    ret ^ "Lexit" ^ index ^ ":\n";;
+
+  let generate_if test dit dif = 
+    let index = (get_counter()) in 
+    let str_test = test ^ "cmp rax, .false\nje Lelse" ^ index ^ "\n" in 
+    let str_dit = dit ^ "jmp Lexit" ^ index ^ "\nLelse" ^ index ^ ":\n" in
+    let str_dif = dif ^ "Lexit" ^ index ^ ":\n" in
+    str_test ^ str_dit ^ str_dif;;
+
+  let generate_box_set expr var = 
+    let str_expr = expr ^ "push rax\n" in
+    let str_end = var ^ "pop qword [rax]\nmov rax, .void\n" in
+    str_expr ^ str_end;;
+
 (*
     generate define == generate set
 *)
@@ -230,9 +246,9 @@ module Code_Gen : CODE_GEN = struct
     | ScmVar'(VarParam(_, minor)) -> "mov rax, qword [rbp + WORD_SIZE ∗ (4 + " ^ (Int.to_string minor) ^ ")]\n"
     | ScmVar'(VarBound(_, major, minor)) -> (get_bound_var (Int.to_string minor) (Int.to_string major))
     | ScmBox'(var) -> ""
-    | ScmBoxGet'(var) -> ""
-    | ScmBoxSet'(var, expr) -> ""
-    | ScmIf'(test, dit, dif) -> ""
+    | ScmBoxGet'(var) -> (generate_helper consts fvars var) ^ "mov rax, qword [rax]\n"
+    | ScmBoxSet'(var, expr) -> (generate_box_set (generate_helper consts fvars expr) (generate_helper consts fvars var))
+    | ScmIf'(test, dit, dif) -> (generate_if (generate_helper consts fvars test) (generate_helper consts fvars dit) (generate_helper consts fvars dif))
     | ScmSeq'(exprList) -> (List.fold_left (fun init x -> init ^ (generate_helper consts fvars x)) "" exprList)
     | ScmSet'(VarParam(_, minor), expr) -> (generate_helper consts fvars expr) ^ (set_var_param (Int.to_string minor))
     | ScmSet'(VarBound(_, major, minor), expr) -> (generate_helper consts fvars expr) ^ (set_bound_var (Int.to_string minor) (Int.to_string major))
