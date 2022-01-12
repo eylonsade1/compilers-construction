@@ -237,32 +237,88 @@ module Code_Gen : CODE_GEN = struct
     let str_end = var ^ "pop qword [rax]\nmov rax, .void\n" in
     str_expr ^ str_end;;
 
+let lambda_counter = make_counter ()
+
+let generate_lambda_env stringList num_of_lambda body = 
+  let env_pointer = "mov rax, qword[rbp + WORD_SIZE*2]\n" in (* rax = LastEnv*)
+  let env_pointer = env_pointer ^ "sub rax, 8\n" in
+  let malloc_env = "MAKE_VECTOR ecx, " ^ (Int.to_string (num_of_lambda*8 + 8)) ^", rax\n" in
+  let ebx_vector_size = "mov ebx, qword[rbp + WORD_SIZE*3]\n" in
+  let ebx_vector_size = ebx_vector_size ^ "add ebx, 1\n" in
+  let malloc_vector = "MAKE_VECTOR edx, ebx, qword[rbp + WORD_SIZE*4]\n" in
+  let mov_current = "mov qword [ecx], edx\n" in
+  let env = env_pointer ^ malloc_env ^ ebx_vector_size ^ malloc_vector ^ mov_current in
+  env
+
+let generate_lambda_simple stringList get_lambda_counter body =
+    (*start generate env*)
+    let num_of_lambda = (get_lambda_counter ()) in
+    let env = generate_lambda_env stringList num_of_lambda body in
+    (* end generate env*)
+    (* allocate closure*)
+    let make_closure = "MAKE_CLOSURE(rax, ecx, Lcode" ^ (Int.to_string num_of_lambda) ^ ")\n" in
+    let closure_body = "jmp Lcont" ^ (Int.to_string num_of_lambda) ^ "\n" in
+    let closure_body = closure_body ^ "Lcode" ^ (Int.to_string num_of_lambda) ^ ":\n" in
+    let closure_body = closure_body ^ "push rbp\nmov rbp, rsp\n" in
+    let closure_body = closure_body ^ body in
+    let closure_body = closure_body ^ "leave\nret\nLcont" ^ (Int.to_string num_of_lambda) ^ ":\n" in
+    (env ^ make_closure ^ closure_body);;
+
+let generate_lambda_opt stringList get_lambda_counter body =
+  (*start generate env*)
+  let num_of_lambda = get_lambda_counter () in
+  let env = generate_lambda_env stringList num_of_lambda body in
+  (* end generate env*)
+  (* allocate closure*)
+  let make_closure = "MAKE_CLOSURE(rax, ecx, Lcode" ^ (Int.to_string num_of_lambda) ^ ")\n" in
+  let closure_body = "jmp Lcont" ^ (Int.to_string num_of_lambda) ^ "\n" in
+  let closure_body = closure_body ^ "Lcode" ^ (Int.to_string num_of_lambda) ^ ":\n" in
+  let real_num_of_args = (List.length stringList) in
+  let vector_size = "mov ebx, qword[rbp + WORD_SIZE*3]\n" in
+  let vector_size = vector_size ^ "sub ebx," ^ (Int.to_string real_num_of_args) ^ "\n" in
+  let vector_size = vector_size ^ "add ebx, 1\n" in
+  let make_vector = "MAKE_VECTOR edx, ebx, qword[rbp + WORD_SIZE*" ^ (Int.to_string (real_num_of_args + 3)) ^"]\n" in
+  let make_vector = make_vector ^ "mov qword[rbp + WORD_SIZE*" ^ (Int.to_string (real_num_of_args + 3)) ^"], edx\n" in
+  let change_num_of_args = "mov qword[rbp + WORD_SIZE*3], " ^ (Int.to_string real_num_of_args) ^ "\n" in
+  let closure_body2 = "push rbp\nmov rbp, rsp\n" in
+  let closure_body2 = closure_body2 ^ body in
+  let closure_body2 = closure_body2 ^ "leave\nret\nLcont" ^ (Int.to_string num_of_lambda) ^ ":\n" in
+  (env ^ make_closure ^ closure_body ^ vector_size ^ make_vector ^ change_num_of_args ^ closure_body2);;
+
 (*
     generate define == generate set
 *)
-  let rec generate_helper consts fvars = function
+  let rec generate_helper consts fvars lambda_counter = function
     | ScmConst'(sexpr) -> (get_const_var sexpr consts)
     | ScmVar'(VarFree(var)) -> (get_Fvar var fvars)
     | ScmVar'(VarParam(_, minor)) -> "mov rax, qword [rbp + WORD_SIZE ∗ (4 + " ^ (Int.to_string minor) ^ ")]\n"
     | ScmVar'(VarBound(_, major, minor)) -> (get_bound_var (Int.to_string minor) (Int.to_string major))
-    | ScmBox'(var) -> ""
-    | ScmBoxGet'(var) -> (generate_helper consts fvars (ScmVar'(var))) ^ "mov rax, qword [rax]\n"
-    | ScmBoxSet'(var, expr) -> (generate_box_set (generate_helper consts fvars expr) (generate_helper consts fvars (ScmVar'(var))))
-    | ScmIf'(test, dit, dif) -> (generate_if (generate_helper consts fvars test) (generate_helper consts fvars dit) (generate_helper consts fvars dif))
-    | ScmSeq'(exprList) -> (List.fold_left (fun init x -> init ^ (generate_helper consts fvars x)) "" exprList)
-    | ScmSet'(VarParam(_, minor), expr) -> (generate_helper consts fvars expr) ^ (set_var_param (Int.to_string minor))
-    | ScmSet'(VarBound(_, major, minor), expr) -> (generate_helper consts fvars expr) ^ (set_bound_var (Int.to_string minor) (Int.to_string major))
-    | ScmSet'(VarFree(var), expr) -> (generate_helper consts fvars expr) ^ (set_Fvar var fvars)
-    | ScmDef'(var, expr) -> ""
-    | ScmOr'(exprList) -> (generate_or (List.map (fun x -> generate_helper consts fvars x) exprList))
-    | ScmLambdaSimple'(stringList, expr) -> ""
-    | ScmLambdaOpt'(stringList, str, expr) -> ""
+    | ScmBox'(var) -> "MALLOC rax, 8\n" (* check *)
+    | ScmBoxGet'(var) -> (generate_helper consts fvars lambda_counter (ScmVar'(var))) ^ "mov rax, qword [rax]\n"
+    | ScmBoxSet'(var, expr) -> (generate_box_set (generate_helper consts fvars lambda_counter expr) (generate_helper consts fvars lambda_counter (ScmVar'(var))))
+    | ScmIf'(test, dit, dif) -> (generate_if (generate_helper consts fvars lambda_counter test) (generate_helper consts fvars lambda_counter dit) (generate_helper consts fvars lambda_counter dif))
+    | ScmSeq'(exprList) -> (List.fold_left (fun init x -> init ^ (generate_helper consts fvars lambda_counter x)) "" exprList)
+    | ScmSet'(VarParam(_, minor), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_var_param (Int.to_string minor))
+    | ScmSet'(VarBound(_, major, minor), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_bound_var (Int.to_string minor) (Int.to_string major))
+    | ScmSet'(VarFree(var), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_Fvar var fvars)
+    | ScmDef'(VarParam(var, minor), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_Fvar var fvars) (* check *)
+    | ScmDef'(VarBound(var, major, minor), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_Fvar var fvars) (* check *)
+    | ScmDef'(VarFree(var), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_Fvar var fvars) (* check *)
+    | ScmOr'(exprList) -> (generate_or (List.map (fun x -> generate_helper consts fvars lambda_counter x) exprList))
+    | ScmLambdaSimple'(stringList, expr) -> (generate_lambda_simple stringList lambda_counter (generate_helper consts fvars lambda_counter expr))
+    | ScmLambdaOpt'(stringList, str, expr) -> (generate_lambda_opt stringList lambda_counter (generate_helper consts fvars lambda_counter expr))
     | ScmApplic'(expr, exprList) -> ""
     | ScmApplicTP'(expr, exprList) -> "";;
   
 
-  let generate consts fvars e = 
-    (generate_helper consts fvars e);;
+  let generate consts fvars e =
+    let lambda_counter = make_counter() in
+    let get_lambda_counter () = 
+      begin
+      (snd lambda_counter)();
+      (fst lambda_counter)()
+      end in
+    (generate_helper consts fvars get_lambda_counter e);;
   
 end;;
 
