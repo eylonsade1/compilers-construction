@@ -19,21 +19,22 @@
       (map-many f args)))))
 
 
-(define fold-left 
-  #;(Add your implementation here
-     Note: The file won't compile like this, beacuase your tag-parser requires define to have a second expression.
-     This is on purpose, so you don't compile the library without completing this implementation by mistake.))
+(define fold-left
+  (lambda (fun init lst)
+    (if (eq? lst '())
+        init
+        (fold-left fun (fun init (car lst)) (cdr lst)))))
 
 (define fold-right
-  #;(Add your implementation here
-     Note: The file won't compile like this, beacuase your tag-parser requires define to have a second expression.
-     This is on purpose, so you don't compile the library without completing this implementation by mistake.))
+  (lambda (fun lst init)
+    (if (eq? lst '())
+        init
+        (fun (car lst) (fold-right fun (cdr lst) init)))))
 
 (define cons*
-  #;(Add your implementation here
-     Note: The file won't compile like this, beacuase your tag-parser requires define to have a second expression.
-     This is on purpose, so you don't compile the library without completing this implementation by mistake.))
-
+ (lambda lst
+   (fold-right cons lst '())))
+   
 (define append
   (let ((null? null?)
 	(fold-right fold-right)
