@@ -279,12 +279,49 @@ let generate_lambda_opt stringList get_lambda_counter body =
   let vector_size = vector_size ^ "add ebx, 1\n" in
   let make_vector = "MAKE_VECTOR edx, ebx, qword[rbp + WORD_SIZE*" ^ (Int.to_string (real_num_of_args + 3)) ^"]\n" in
   let make_vector = make_vector ^ "mov qword[rbp + WORD_SIZE*" ^ (Int.to_string (real_num_of_args + 3)) ^"], edx\n" in
-  let change_num_of_args = "mov qword[rbp + WORD_SIZE*3], " ^ (Int.to_string real_num_of_args) ^ "\n" in
+  (* let change_num_of_args = "mov qword[rbp + WORD_SIZE*3], " ^ (Int.to_string real_num_of_args) ^ "\n" in *)
   let closure_body2 = "push rbp\nmov rbp, rsp\n" in
   let closure_body2 = closure_body2 ^ body in
   let closure_body2 = closure_body2 ^ "leave\nret\nLcont" ^ (Int.to_string num_of_lambda) ^ ":\n" in
-  (env ^ make_closure ^ closure_body ^ vector_size ^ make_vector ^ change_num_of_args ^ closure_body2);;
+  (env ^ make_closure ^ closure_body ^ vector_size ^ make_vector ^ closure_body2);;
+  (* (env ^ make_closure ^ closure_body ^ vector_size ^ make_vector ^ change_num_of_args ^ closure_body2);; *)
 
+  let generate_applic arg_list proc =
+    let make_args = (List.fold_right (fun arg init -> init ^ arg ^ "push rax\n") arg_list "push 0\n") in
+    let push_n = "push " ^ (Int.to_string (List.length arg_list)) ^ "\n" in
+    let call_proc = proc ^ "CLOSURE_ENV(ebx, rax)\n" in
+    let call_proc = call_proc ^ "push ebx\n" in
+    let call_proc = call_proc ^ "CLOSURE_CODE(ebx, rax)\n" in
+    let call_proc = call_proc ^ "call ebx\n" in
+    (make_args ^ push_n ^ call_proc);;
+
+  let generate_applicTP arg_list proc =
+    let arg_count = (List.length arg_list) in
+    let index = (get_counter()) in
+    let make_args = (List.fold_right (fun arg init -> init ^ arg ^ "push rax\n") arg_list "push 0\n") in
+    let push_n = "push " ^ (Int.to_string arg_count) ^ "\n" in
+    let get_closure = proc ^ "CLOSURE_ENV(ebx, rax)\n" in
+    let get_closure = get_closure ^ "push ebx\n" in
+    let save_ret_address = "push qword [rbp + 8 * 1]\n" in
+    let get_frame_pointer = "mov ecx, rbp\n" in
+    let get_frame_pointer = get_frame_pointer ^ "sub ecx, 8\n" in
+    let num_of_args_old_frame = "mov ebx, qword [ecx + 4 * 8]\n" in
+    let start_of_old_frame = "mul ebx, 8\n" in
+    let start_of_old_frame = start_of_old_frame ^ "add ebx, ecx\n" in
+    let start_of_old_frame = start_of_old_frame ^ "add ebx, 32\n" in 
+    let make_loop = "LOOP" ^ index ^ ":\n
+                    cmp ecx, esp\n
+                    je END_LOOP" ^ index ^ "\n
+                    mov edx, [ecx]\n
+                    mov [ebx], edx\n
+                    add ecx, 8\n
+                    add ebx, 8\n
+                    jmp LOOP" ^ index ^ "\n
+                    END_LOOP" ^ index ^ ":\n" in
+    let move_frame_code = (get_frame_pointer ^ num_of_args_old_frame ^ start_of_old_frame ^ make_loop) in
+    let final_jump = "CLOSURE_CODE(ebx, rax)\n" in
+    let final_jump = final_jump ^ "jmp ebx\n" in
+    (make_args ^ push_n ^ get_closure ^ save_ret_address ^ move_frame_code ^ final_jump);;
 (*
     generate define == generate set
 *)
@@ -307,8 +344,9 @@ let generate_lambda_opt stringList get_lambda_counter body =
     | ScmOr'(exprList) -> (generate_or (List.map (fun x -> generate_helper consts fvars lambda_counter x) exprList))
     | ScmLambdaSimple'(stringList, expr) -> (generate_lambda_simple stringList lambda_counter (generate_helper consts fvars lambda_counter expr))
     | ScmLambdaOpt'(stringList, str, expr) -> (generate_lambda_opt stringList lambda_counter (generate_helper consts fvars lambda_counter expr))
-    | ScmApplic'(expr, exprList) -> ""
-    | ScmApplicTP'(expr, exprList) -> "";;
+    | ScmApplic'(expr, exprList) -> (generate_applic (List.map (fun x -> generate_helper consts fvars lambda_counter x) exprList) (generate_helper consts fvars lambda_counter expr))
+    | ScmApplicTP'(expr, exprList) -> (generate_applicTP (List.map (fun x -> generate_helper consts fvars lambda_counter x) exprList) (generate_helper consts fvars lambda_counter expr))
+    ;;
   
 
   let generate consts fvars e =
