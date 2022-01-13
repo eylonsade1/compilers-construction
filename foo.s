@@ -10,7 +10,7 @@ malloc_pointer:
 ;;; here we REServe enough Quad-words (64-bit "cells") for the free variables
 ;;; each free variable has 8 bytes reserved for a 64-bit pointer to its value
 fvar_tbl:
-    resq 48
+    resq 49
 
 section .data
 const_tbl:
@@ -108,31 +108,13 @@ user_code_fragment:
 ;;; The code you compiled will be added here.
 ;;; It will be executed immediately after the closures for 
 ;;; the primitive procedures are set up.
-push 0
 mov rax, const_tbl+6
-push rax
-push 1
-mov rax, qword [rbp + WORD_SIZE*2]
-sub rax, 8
-MAKE_VECTOR rcx, 16, rax
-mov rbx, qword [rbp + WORD_SIZE*3]
-add rbx, 1
-mov rax, qword [rbp + WORD_SIZE*4]
-MAKE_VECTOR rdx, rbx, rax
-mov qword [rcx], rdx
-MAKE_CLOSURE(rax, rcx, Lcode1)
-jmp Lcont1
-Lcode1:
-push rbp
-mov rbp, rsp
-mov rax, qword [rbp + WORD_SIZE ∗ 4]
-leave
-ret
-Lcont1:
-CLOSURE_ENV(rbx, rax)
-push rbx
-CLOSURE_CODE(rbx, rax)
-call rbx
+mov qword [fvar_tbl+8*48], rax
+mov rax, SOB_VOID_ADDRESS
+
+	call write_sob_if_not_void
+
+mov rax, qword [fvar_tbl+48*8]
 
 	call write_sob_if_not_void;;; Clean up the dummy frame, set the exit status to 0 ("success"), 
    ;;; and return from main
