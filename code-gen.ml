@@ -193,14 +193,14 @@ module Code_Gen : CODE_GEN = struct
  
   let find_index_in_tbl tbl name =
     let fvar = (List.find (fun (var, index) -> name = var) tbl) in
-    (Int.to_string (snd fvar));;
+    (Int.to_string ((snd fvar)*8));;
 
   let get_Fvar name fvar_tbl =
     let index = (find_index_in_tbl fvar_tbl name) in
-    "mov rax, qword [fvar_tbl+" ^ index ^ "*8]\n";;
+    "mov rax, qword [fvar_tbl+" ^ index ^ "]\n";;
 
   let set_Fvar var fvar_tbl = 
-    let str = "mov qword [fvar_tbl+8*" ^ (find_index_in_tbl fvar_tbl var) ^ "], rax\n" in
+    let str = "mov qword [fvar_tbl+" ^ (find_index_in_tbl fvar_tbl var) ^ "], rax\n" in
     str ^ "mov rax, SOB_VOID_ADDRESS\n";;
 
   let set_var_param minor = 
@@ -248,7 +248,7 @@ let generate_lambda_env stringList num_of_lambda body =
   let malloc_vector = "mov rax, qword [rbp+8*4]\nMAKE_VECTOR rdx, rbx, rax\n" in (*check*)
   let mov_current = "mov qword [rcx], rdx\n" in
   let env = env_pointer ^ malloc_env ^ rbx_vector_size ^ malloc_vector ^ mov_current in
-  let env = if num_of_lambda = 1 then "mov rax, 0\n" else env in
+  let env = if num_of_lambda = 1 then "mov rcx, SOB_NIL_ADDRESS\n" else env in
   env
 
 let generate_lambda_simple stringList get_lambda_counter body =
@@ -289,24 +289,27 @@ let generate_lambda_opt stringList get_lambda_counter body =
 
   let generate_applic arg_list proc =
     let make_args = (List.fold_right (fun arg init -> init ^ arg ^ "push rax\n") arg_list "push 0\n") in
-    let push_n = "push " ^ (Int.to_string (List.length arg_list)) ^ "\n" in
+    let push_n = "push " ^ (Int.to_string ((List.length arg_list)+1)) ^ "\n" in
     let call_proc = proc ^ "CLOSURE_ENV rbx, rax\n" in
     let call_proc = call_proc ^ "push rbx\n" in
     let call_proc = call_proc ^ "CLOSURE_CODE rbx, rax\n" in
     let call_proc = call_proc ^ "call rbx\n" in
-    (make_args ^ push_n ^ call_proc);;
+    let finish_applic = "add rsp, 8 ; pop env\n
+    pop rbx ; pop arg count\n
+    lea rsp , [rsp + 8*rbx]\n" in
+    (make_args ^ push_n ^ call_proc ^ finish_applic);;
 
   let generate_applicTP arg_list proc =
     let arg_count = (List.length arg_list) in
     let index = (get_counter()) in
     let make_args = (List.fold_right (fun arg init -> init ^ arg ^ "push rax\n") arg_list "push 0\n") in
-    let push_n = "push " ^ (Int.to_string arg_count) ^ "\n" in
+    let push_n = "push " ^ (Int.to_string (arg_count+1)) ^ "\n" in
     let get_closure = proc ^ "CLOSURE_ENV(rbx, rax)\n" in
     let get_closure = get_closure ^ "push rbx\n" in
-    let save_ret_address = "push qword [rbp + 8 * 1]\n" in
+    let save_ret_address = "push qword [rbp+8]\n" in
     let get_frame_pointer = "mov rcx, rbp\n" in
     let get_frame_pointer = get_frame_pointer ^ "sub rcx, 8\n" in
-    let num_of_args_old_frame = "mov rbx, qword [rcx + 4 * 8]\n" in
+    let num_of_args_old_frame = "mov rbx, qword [rcx+4*8]\n" in
     let start_of_old_frame = "mul rbx, 8\n" in
     let start_of_old_frame = start_of_old_frame ^ "add rbx, rcx\n" in
     let start_of_old_frame = start_of_old_frame ^ "add rbx, 32\n" in 
@@ -320,16 +323,19 @@ let generate_lambda_opt stringList get_lambda_counter body =
                     jmp LOOP" ^ index ^ "\n
                     END_LOOP" ^ index ^ ":\n" in
     let move_frame_code = (get_frame_pointer ^ num_of_args_old_frame ^ start_of_old_frame ^ make_loop) in
-    let final_jump = "CLOSURE_CODE(rbx, rax)\n" in
+    let final_jump = "CLOSURE_CODE rbx, rax\n" in
     let final_jump = final_jump ^ "jmp rbx\n" in
-    (make_args ^ push_n ^ get_closure ^ save_ret_address ^ move_frame_code ^ final_jump);;
+    let finish_applic = "add rsp, 8 ; pop env\n
+    pop rbx ; pop arg count\n
+    lea rsp , [rsp+8*rbx]\n" in
+    (make_args ^ push_n ^ get_closure ^ save_ret_address ^ move_frame_code ^ final_jump ^ finish_applic);;
 (*
     generate define == generate set
 *)
   let rec generate_helper consts fvars lambda_counter = function
     | ScmConst'(sexpr) -> (get_const_var sexpr consts)
     | ScmVar'(VarFree(var)) -> (get_Fvar var fvars)
-    | ScmVar'(VarParam(_, minor)) -> "mov rax, qword [rbp+" ^ (Int.to_string ((4+minor*8))) ^ "]\n"
+    | ScmVar'(VarParam(_, minor)) -> "mov rax, qword [rbp+" ^ (Int.to_string (((4+minor)*8))) ^ "]\n"
     | ScmVar'(VarBound(_, major, minor)) -> (get_bound_var (Int.to_string minor) (Int.to_string major))
     | ScmBox'(var) -> "MALLOC rax, 8\n" (* check *)
     | ScmBoxGet'(var) -> (generate_helper consts fvars lambda_counter (ScmVar'(var))) ^ "mov rax, qword [rax]\n"

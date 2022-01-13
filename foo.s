@@ -18,7 +18,7 @@ db T_VOID
 db T_NIL
 db T_BOOL, 0
 db T_BOOL, 1
-MAKE_LITERAL_RATIONAL(2, 1)
+MAKE_LITERAL_RATIONAL(1, 1)
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -108,13 +108,35 @@ user_code_fragment:
 ;;; The code you compiled will be added here.
 ;;; It will be executed immediately after the closures for 
 ;;; the primitive procedures are set up.
-mov rax, const_tbl+6
-mov qword [fvar_tbl+8*48], rax
+mov rcx, SOB_NIL_ADDRESS
+MAKE_CLOSURE(rax, rcx, Lcode1)
+jmp Lcont1
+Lcode1:
+push rbp
+mov rbp, rsp
+mov rax, qword [rbp+32]
+leave
+ret
+Lcont1:
+mov qword [fvar_tbl+384], rax
 mov rax, SOB_VOID_ADDRESS
 
 	call write_sob_if_not_void
 
-mov rax, qword [fvar_tbl+48*8]
+push 0
+mov rax, const_tbl+6
+push rax
+push 2
+mov rax, qword [fvar_tbl+384]
+CLOSURE_ENV rbx, rax
+push rbx
+CLOSURE_CODE rbx, rax
+call rbx
+add rsp, 8 ; pop env
+
+    pop rbx ; pop arg count
+
+    lea rsp , [rsp + 8*rbx]
 
 	call write_sob_if_not_void;;; Clean up the dummy frame, set the exit status to 0 ("success"), 
    ;;; and return from main

@@ -1,2 +1,2 @@
-(define x 2)
-x
+(define x (lambda (y) y))
+(x 1)
