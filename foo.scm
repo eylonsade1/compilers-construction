@@ -1,2 +1,2 @@
-(define x (lambda (y) y))
-(x 1)
+(define x (lambda (x y . z) z))
+(x 1 2 3)

@@ -135,8 +135,8 @@
     jmp %%vector_loop
 %%vector_loop_end:
     pop %1
-    pop rcx
-    pop rbx
+  pop rcx
+    pop rbx  
 %endmacro
 
 ;;; Creates a SOB with tag %2 
@@ -155,8 +155,19 @@
         dq %3
 %endmacro
 
+%macro MAKE_LITERAL 2
+		db %1
+        %2
+%endmacro
+
 %define MAKE_RATIONAL(r, num, den) \
 	MAKE_TWO_WORDS r, T_RATIONAL, num, den
+
+%define MAKE_LITERAL_FLOAT(val) \
+	MAKE_LITERAL T_FLOAT, dq val
+
+%define MAKE_LITERAL_CHAR(ch) \
+	MAKE_LITERAL T_CHAR, db ch
 
 %define MAKE_LITERAL_RATIONAL(num, den) \
 	MAKE_WORDS_LIT T_RATIONAL, num, den

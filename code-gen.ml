@@ -90,7 +90,8 @@ module Code_Gen : CODE_GEN = struct
     | ScmVoid -> 1
     | ScmBoolean(bool) -> 2
     | ScmChar(ch) -> 2
-    | ScmNumber(x) -> 9
+    | ScmNumber(ScmRational(x, y)) -> 17
+    | ScmNumber(ScmReal(x)) -> 9
     | ScmString(s) -> ((String.length s) + 9)
     | ScmPair(car, cdr) -> 17
     | ScmSymbol(x) -> 9
@@ -113,10 +114,10 @@ module Code_Gen : CODE_GEN = struct
     | [ScmNumber(ScmRational(x, y)), num] -> [ScmNumber(ScmRational(x, y)), (num, "MAKE_LITERAL_RATIONAL("^(Int.to_string x)^", "^(Int.to_string y)^")")] (*check*)
     | [ScmNumber(ScmReal(x)), num] -> [ScmNumber(ScmReal(x)), (num, "MAKE_LITERAL_FLOAT(" ^ (Float.to_string (x)) ^ ")")]
     | [ScmString(s), num] -> [ScmString(s), (num, "MAKE_LITERAL_STRING(\"" ^ s ^ "\")")]
-    | [ScmPair(car, cdr), num] -> [ScmPair(car, cdr), (num, "MAKE_LITERAL_PAIR(consts+" ^ (Int.to_string (find_offset car init)) ^ ", consts+" ^ (Int.to_string (find_offset cdr init)) ^ ")")]
-    | [ScmSymbol(x), num] -> [ScmSymbol(x), (num, "MAKE_LITERAL_SYMBOL(consts+" ^ (Int.to_string (find_offset (ScmString(x)) init)) ^ ")")]
+    | [ScmPair(car, cdr), num] -> [ScmPair(car, cdr), (num, "MAKE_LITERAL_PAIR(const_tbl+" ^ (Int.to_string (find_offset car init)) ^ ", const_tbl+" ^ (Int.to_string (find_offset cdr init)) ^ ")")]
+    | [ScmSymbol(x), num] -> [ScmSymbol(x), (num, "MAKE_LITERAL_SYMBOL(const_tbl+" ^ (Int.to_string (find_offset (ScmString(x)) init)) ^ ")")]
     | [ScmVector([]), num] -> [ScmVector([]), (num, "MAKE_LITERAL_VECTOR()")]
-    | [ScmVector(list), num] ->  let str = (List.fold_left (fun initstr ex -> initstr ^ "consts+" ^ (Int.to_string (find_offset ex init)) ^ ", ") "" list) in 
+    | [ScmVector(list), num] ->  let str = (List.fold_left (fun initstr ex -> initstr ^ "const_tbl+" ^ (Int.to_string (find_offset ex init)) ^ ", ") "" list) in 
                                         let str = (String.sub str 0 ((String.length str) - 2)) in
                                           [ScmVector(list), (num, "MAKE_LITERAL_VECTOR(" ^ str ^ ")")]
     | _ -> raise X_not_yet_implemented;;
@@ -265,6 +266,18 @@ let generate_lambda_simple stringList get_lambda_counter body =
     let closure_body = closure_body ^ "leave\nret\nLcont" ^ (Int.to_string num_of_lambda) ^ ":\n" in
     (env ^ make_closure ^ closure_body);;
 
+let generate_opt_last_arg num_of_args_without_opt counter= 
+  let get_magic_pointer = "mov rcx, rbp\nadd rcx, 24\nmov rbx,qword [rcx]\nimul rbx, 8\nadd rcx, rbx\n" in
+  (* let get_magic_pointer = get_magic_pointer ^ "lea rcx, [rbp+8*(3+rbx)]\n" in (*rcx stores pointer to magic*)*)
+  let get_magic_pointer = get_magic_pointer ^ "mov rax, rcx\nsub rax, 8\n" in
+  let get_last_non_opt_arg_index = "mov rdx, rbp\nadd rdx, "^(Int.to_string (8*(3+num_of_args_without_opt)))^"\n" in
+  let generate_pair = "MAKE_LIST_LOOP" ^ (Int.to_string counter) ^ ":\n" in
+  let generate_pair = generate_pair ^ "cmp rdx,rax\nje END_MAKE_LIST_LOOP" ^ (Int.to_string counter) ^ "\n" in
+  let generate_pair = generate_pair ^ "push rax\nmov rax, qword [rax]\nmov rcx, qword [rcx]\n" in
+  let generate_pair = generate_pair ^ "MAKE_PAIR(rbx, rax, rcx)\npop rax\nmov qword [rax], rbx\nmov rcx, rax\nsub rax, 8\n" in
+  let generate_pair = generate_pair ^ "jmp MAKE_LIST_LOOP" ^ (Int.to_string counter) ^"\nEND_MAKE_LIST_LOOP" ^ (Int.to_string counter) ^":\n" in
+  (get_magic_pointer ^ get_last_non_opt_arg_index ^ generate_pair)
+
 let generate_lambda_opt stringList get_lambda_counter body =
   (*start generate env*)
   let num_of_lambda = get_lambda_counter () in
@@ -273,23 +286,21 @@ let generate_lambda_opt stringList get_lambda_counter body =
   (* allocate closure*)
   let make_closure = "MAKE_CLOSURE(rax, rcx, Lcode" ^ (Int.to_string num_of_lambda) ^ ")\n" in
   let closure_body = "jmp Lcont" ^ (Int.to_string num_of_lambda) ^ "\n" in
-  let closure_body = closure_body ^ "Lcode" ^ (Int.to_string num_of_lambda) ^ ":\n" in
-  let real_num_of_args = (List.length stringList) in
-  let vector_size = "mov rbx, qword [rbp+8*3]\n" in
+  let closure_body = closure_body ^ "Lcode" ^ (Int.to_string num_of_lambda) ^ ":\npush rbp\nmov rbp, rsp\n" in
+  let num_of_args_without_opt = ((List.length stringList)) in
+(* let vector_size = "mov rbx, qword [rbp+8*3]\n" in
   let vector_size = vector_size ^ "sub rbx," ^ (Int.to_string real_num_of_args) ^ "\n" in
-  let vector_size = vector_size ^ "add rbx, 1\n" in
-  let make_vector = "MAKE_VECTOR rdx, rbx, qword [rbp+8*" ^ (Int.to_string (real_num_of_args + 3)) ^"]\n" in
-  let make_vector = make_vector ^ "mov qword [rbp+8*" ^ (Int.to_string (real_num_of_args + 3)) ^"], rdx\n" in
+  let make_vector = "mov rcx, rbp\nadd rcx, " ^ (Int.to_string ((real_num_of_args + 3)*8)) ^"\nMAKE_VECTOR rdx, rbx, rcx\n" in
+  let make_vector = make_vector ^ "mov qword [rbp+8*" ^ (Int.to_string (real_num_of_args + 3)) ^"], rdx\n" in*)
+  let make_list_of_args = (generate_opt_last_arg num_of_args_without_opt num_of_lambda) in
   (* let change_num_of_args = "mov qword [rbp + 8*3], " ^ (Int.to_string real_num_of_args) ^ "\n" in *)
-  let closure_body2 = "push rbp\nmov rbp, rsp\n" in
-  let closure_body2 = closure_body2 ^ body in
-  let closure_body2 = closure_body2 ^ "leave\nret\nLcont" ^ (Int.to_string num_of_lambda) ^ ":\n" in
-  (env ^ make_closure ^ closure_body ^ vector_size ^ make_vector ^ closure_body2);;
+  let closure_body2 = body ^ "leave\nret\nLcont" ^ (Int.to_string num_of_lambda) ^ ":\n" in
+  (env ^ make_closure ^ closure_body ^ make_list_of_args ^ closure_body2);;
   (* (env ^ make_closure ^ closure_body ^ vector_size ^ make_vector ^ change_num_of_args ^ closure_body2);; *)
 
   let generate_applic arg_list proc =
-    let make_args = (List.fold_right (fun arg init -> init ^ arg ^ "push rax\n") arg_list "push 0\n") in
-    let push_n = "push " ^ (Int.to_string ((List.length arg_list)+1)) ^ "\n" in
+    let make_args = (List.fold_right (fun arg init -> init ^ arg ^ "push rax\n") arg_list "push SOB_NIL_ADDRESS\n") in
+    let push_n = "mov rax, rsp\nmov rax, 0x" ^ (Int.to_string ((List.length arg_list)+1)) ^ "\npush rax\n" in
     let call_proc = proc ^ "CLOSURE_ENV rbx, rax\n" in
     let call_proc = call_proc ^ "push rbx\n" in
     let call_proc = call_proc ^ "CLOSURE_CODE rbx, rax\n" in
@@ -302,7 +313,7 @@ let generate_lambda_opt stringList get_lambda_counter body =
   let generate_applicTP arg_list proc =
     let arg_count = (List.length arg_list) in
     let index = (get_counter()) in
-    let make_args = (List.fold_right (fun arg init -> init ^ arg ^ "push rax\n") arg_list "push 0\n") in
+    let make_args = (List.fold_right (fun arg init -> init ^ arg ^ "push rax\n") arg_list "push SOB_NIL_ADDRESS\n") in
     let push_n = "push " ^ (Int.to_string (arg_count+1)) ^ "\n" in
     let get_closure = proc ^ "CLOSURE_ENV(rbx, rax)\n" in
     let get_closure = get_closure ^ "push rbx\n" in
@@ -335,7 +346,7 @@ let generate_lambda_opt stringList get_lambda_counter body =
   let rec generate_helper consts fvars lambda_counter = function
     | ScmConst'(sexpr) -> (get_const_var sexpr consts)
     | ScmVar'(VarFree(var)) -> (get_Fvar var fvars)
-    | ScmVar'(VarParam(_, minor)) -> "mov rax, qword [rbp+" ^ (Int.to_string (((4+minor)*8))) ^ "]\n"
+    | ScmVar'(VarParam(_, minor)) -> "mov rax, qword [rbp+"^(Int.to_string ((4+minor)*8))^"]\n"
     | ScmVar'(VarBound(_, major, minor)) -> (get_bound_var (Int.to_string minor) (Int.to_string major))
     | ScmBox'(var) -> "MALLOC rax, 8\n" (* check *)
     | ScmBoxGet'(var) -> (generate_helper consts fvars lambda_counter (ScmVar'(var))) ^ "mov rax, qword [rax]\n"

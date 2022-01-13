@@ -19,6 +19,8 @@ db T_NIL
 db T_BOOL, 0
 db T_BOOL, 1
 MAKE_LITERAL_RATIONAL(1, 1)
+MAKE_LITERAL_RATIONAL(2, 1)
+MAKE_LITERAL_RATIONAL(3, 1)
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -114,7 +116,29 @@ jmp Lcont1
 Lcode1:
 push rbp
 mov rbp, rsp
-mov rax, qword [rbp+32]
+mov rcx, rbp
+add rcx, 24
+mov rbx,qword [rcx]
+imul rbx, 8
+add rcx, rbx
+mov rax, rcx
+sub rax, 8
+mov rdx, rbp
+add rdx, 40
+MAKE_LIST_LOOP1:
+cmp rdx,rax
+je END_MAKE_LIST_LOOP1
+push rax
+mov rax, qword [rax]
+mov rcx, qword [rcx]
+MAKE_PAIR(rbx, rax, rcx)
+pop rax
+mov qword [rax], rbx
+mov rcx, rax
+sub rax, 8
+jmp MAKE_LIST_LOOP1
+END_MAKE_LIST_LOOP1:
+mov rax, qword [rbp+48]
 leave
 ret
 Lcont1:
@@ -123,10 +147,16 @@ mov rax, SOB_VOID_ADDRESS
 
 	call write_sob_if_not_void
 
-push 0
+push SOB_NIL_ADDRESS
+mov rax, const_tbl+40
+push rax
+mov rax, const_tbl+23
+push rax
 mov rax, const_tbl+6
 push rax
-push 2
+mov rax, rsp
+mov rax, 0x4
+push rax
 mov rax, qword [fvar_tbl+384]
 CLOSURE_ENV rbx, rax
 push rbx
