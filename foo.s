@@ -10,7 +10,7 @@ malloc_pointer:
 ;;; here we REServe enough Quad-words (64-bit "cells") for the free variables
 ;;; each free variable has 8 bytes reserved for a 64-bit pointer to its value
 fvar_tbl:
-    resq 49
+    resq 48
 
 section .data
 const_tbl:
@@ -18,9 +18,7 @@ db T_VOID
 db T_NIL
 db T_BOOL, 0
 db T_BOOL, 1
-MAKE_LITERAL_RATIONAL(1, 1)
 MAKE_LITERAL_RATIONAL(2, 1)
-MAKE_LITERAL_RATIONAL(3, 1)
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -110,54 +108,52 @@ user_code_fragment:
 ;;; The code you compiled will be added here.
 ;;; It will be executed immediately after the closures for 
 ;;; the primitive procedures are set up.
-mov rcx, SOB_NIL_ADDRESS
+push SOB_NIL_ADDRESS
+mov rax, rsp
+mov rax, 0x1
+push rax
+MAKE_VECTOR rcx, 0, rax
 MAKE_CLOSURE(rax, rcx, Lcode1)
 jmp Lcont1
 Lcode1:
 push rbp
 mov rbp, rsp
-mov rcx, rbp
-add rcx, 24
-mov rbx,qword [rcx]
-imul rbx, 8
-add rcx, rbx
-mov rax, rcx
-sub rax, 8
-mov rdx, rbp
-add rdx, 40
-MAKE_LIST_LOOP1:
-cmp rdx,rax
-je END_MAKE_LIST_LOOP1
+push SOB_NIL_ADDRESS
+mov rax, rsp
+mov rax, 0x1
 push rax
-mov rax, qword [rax]
-mov rcx, qword [rcx]
-MAKE_PAIR(rbx, rax, rcx)
-pop rax
-mov qword [rax], rbx
-mov rcx, rax
+mov rax, qword [rbp+8*2] ; in rax pointer last env
 sub rax, 8
-jmp MAKE_LIST_LOOP1
-END_MAKE_LIST_LOOP1:
-mov rax, qword [rbp+48]
+mov rbx, [rax+1] ; rbx stores last env size
+add rbx, 1
+MAKE_VECTOR rcx, rbx, rax
+mov rbx, qword [rbp+8*3]
+add rbx, 1
+mov rax, qword [rbp+8*4]
+MAKE_VECTOR rdx, rbx, rax
+mov qword [rcx], rdx
+MAKE_CLOSURE(rax, rcx, Lcode2)
+jmp Lcont2
+Lcode2:
+push rbp
+mov rbp, rsp
+mov rax, const_tbl+6
+leave
+ret
+Lcont2:
+CLOSURE_ENV rbx, rax
+push rbx
+CLOSURE_CODE rbx, rax
+call rbx
+add rsp, 8 ; pop env
+
+    pop rbx ; pop arg count
+
+    lea rsp , [rsp + 8*rbx]
+mov rax, const_tbl+6
 leave
 ret
 Lcont1:
-mov qword [fvar_tbl+384], rax
-mov rax, SOB_VOID_ADDRESS
-
-	call write_sob_if_not_void
-
-push SOB_NIL_ADDRESS
-mov rax, const_tbl+40
-push rax
-mov rax, const_tbl+23
-push rax
-mov rax, const_tbl+6
-push rax
-mov rax, rsp
-mov rax, 0x4
-push rax
-mov rax, qword [fvar_tbl+384]
 CLOSURE_ENV rbx, rax
 push rbx
 CLOSURE_CODE rbx, rax

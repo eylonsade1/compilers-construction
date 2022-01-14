@@ -126,7 +126,7 @@
     mov rcx, %2
 %%vector_loop:
     cmp rcx, 0
-    js %%vector_loop_end
+    je %%vector_loop_end
     mov rbx, [%3]
     mov [%1], rbx
     add %1, WORD_SIZE

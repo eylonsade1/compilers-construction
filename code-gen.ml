@@ -221,14 +221,14 @@ module Code_Gen : CODE_GEN = struct
     
   let generate_or strList = 
     let index = (get_counter()) in
-    let orStr = "cmp rax, .false\njne Lexit" ^ index ^ "\n" in
+    let orStr = "cmp rax, SOB_FALSE_ADDRESS\njne Lexit" ^ index ^ "\n" in
     let ret = (List.fold_left (fun init str -> init ^ str ^ orStr) "" strList) in
     let ret = (String.sub ret 0 ((String.length ret) - (String.length orStr))) in 
     ret ^ "Lexit" ^ index ^ ":\n";;
 
   let generate_if test dit dif = 
     let index = (get_counter()) in 
-    let str_test = test ^ "cmp rax, .false\nje Lelse" ^ index ^ "\n" in 
+    let str_test = test ^ "cmp rax, SOB_FALSE_ADDRESS\nje Lelse" ^ index ^ "\n" in 
     let str_dit = dit ^ "jmp Lexit" ^ index ^ "\nLelse" ^ index ^ ":\n" in
     let str_dif = dif ^ "Lexit" ^ index ^ ":\n" in
     str_test ^ str_dit ^ str_dif;;
@@ -241,20 +241,21 @@ module Code_Gen : CODE_GEN = struct
 let lambda_counter = make_counter ()
 
 let generate_lambda_env stringList num_of_lambda body = 
-  let env_pointer = "mov rax, qword [rbp+8*2]\n" in (* rax = LastEnv*)
+  let env_pointer = "mov rax, qword [rbp+8*2] ; in rax pointer last env\n" in (* rax = LastEnv*)
   let env_pointer = env_pointer ^ "sub rax, 8\n" in
-  let malloc_env = "MAKE_VECTOR rcx, " ^ (Int.to_string (num_of_lambda*8 + 8)) ^", rax\n" in
+  let env_pointer = env_pointer ^ "mov rbx, [rax+1] ; rbx stores last env size\n" in
+  let env_pointer = env_pointer ^ "add rbx, 1\n" in
+  let malloc_env = "MAKE_VECTOR rcx, rbx, rax\n" in
   let rbx_vector_size = "mov rbx, qword [rbp+8*3]\n" in
   let rbx_vector_size = rbx_vector_size ^ "add rbx, 1\n" in
   let malloc_vector = "mov rax, qword [rbp+8*4]\nMAKE_VECTOR rdx, rbx, rax\n" in (*check*)
   let mov_current = "mov qword [rcx], rdx\n" in
   let env = env_pointer ^ malloc_env ^ rbx_vector_size ^ malloc_vector ^ mov_current in
-  let env = if num_of_lambda = 1 then "mov rcx, SOB_NIL_ADDRESS\n" else env in
+  let env = if num_of_lambda = 1 then "MAKE_VECTOR rcx, 0, rax\n" else env in
   env
-
-let generate_lambda_simple stringList get_lambda_counter body =
+    
+let generate_lambda_simple stringList num_of_lambda body =
     (*start generate env*)
-    let num_of_lambda = (get_lambda_counter ()) in
     let env = generate_lambda_env stringList num_of_lambda body in
     (* end generate env*)
     (* allocate closure*)
@@ -266,7 +267,7 @@ let generate_lambda_simple stringList get_lambda_counter body =
     let closure_body = closure_body ^ "leave\nret\nLcont" ^ (Int.to_string num_of_lambda) ^ ":\n" in
     (env ^ make_closure ^ closure_body);;
 
-let generate_opt_last_arg num_of_args_without_opt counter= 
+let generate_opt_last_arg num_of_args_without_opt counter = 
   let get_magic_pointer = "mov rcx, rbp\nadd rcx, 24\nmov rbx,qword [rcx]\nimul rbx, 8\nadd rcx, rbx\n" in
   (* let get_magic_pointer = get_magic_pointer ^ "lea rcx, [rbp+8*(3+rbx)]\n" in (*rcx stores pointer to magic*)*)
   let get_magic_pointer = get_magic_pointer ^ "mov rax, rcx\nsub rax, 8\n" in
@@ -278,9 +279,8 @@ let generate_opt_last_arg num_of_args_without_opt counter=
   let generate_pair = generate_pair ^ "jmp MAKE_LIST_LOOP" ^ (Int.to_string counter) ^"\nEND_MAKE_LIST_LOOP" ^ (Int.to_string counter) ^":\n" in
   (get_magic_pointer ^ get_last_non_opt_arg_index ^ generate_pair)
 
-let generate_lambda_opt stringList get_lambda_counter body =
+let generate_lambda_opt stringList num_of_lambda body =
   (*start generate env*)
-  let num_of_lambda = get_lambda_counter () in
   let env = generate_lambda_env stringList num_of_lambda body in
   (* end generate env*)
   (* allocate closure*)
@@ -315,24 +315,24 @@ let generate_lambda_opt stringList get_lambda_counter body =
     let index = (get_counter()) in
     let make_args = (List.fold_right (fun arg init -> init ^ arg ^ "push rax\n") arg_list "push SOB_NIL_ADDRESS\n") in
     let push_n = "push " ^ (Int.to_string (arg_count+1)) ^ "\n" in
-    let get_closure = proc ^ "CLOSURE_ENV(rbx, rax)\n" in
+    let get_closure = proc ^ "CLOSURE_ENV rbx, rax\n" in
     let get_closure = get_closure ^ "push rbx\n" in
     let save_ret_address = "push qword [rbp+8]\n" in
     let get_frame_pointer = "mov rcx, rbp\n" in
     let get_frame_pointer = get_frame_pointer ^ "sub rcx, 8\n" in
     let num_of_args_old_frame = "mov rbx, qword [rcx+4*8]\n" in
-    let start_of_old_frame = "mul rbx, 8\n" in
+    let start_of_old_frame = "imul rbx, 8\n" in
     let start_of_old_frame = start_of_old_frame ^ "add rbx, rcx\n" in
     let start_of_old_frame = start_of_old_frame ^ "add rbx, 32\n" in 
     let make_loop = "LOOP" ^ index ^ ":\n
-                    cmp rcx, esp\n
-                    je END_LOOP" ^ index ^ "\n
-                    mov rdx, [rcx]\n
-                    mov [rbx], rdx\n
-                    add rcx, 8\n
-                    add rbx, 8\n
-                    jmp LOOP" ^ index ^ "\n
-                    END_LOOP" ^ index ^ ":\n" in
+    cmp rcx, rsp\n
+    je END_LOOP" ^ index ^ "\n
+    mov rdx, [rcx]\n
+    mov [rbx], rdx\n
+    add rcx, 8\n
+    add rbx, 8\n
+    jmp LOOP" ^ index ^ "\n
+    END_LOOP" ^ index ^ ":\n" in
     let move_frame_code = (get_frame_pointer ^ num_of_args_old_frame ^ start_of_old_frame ^ make_loop) in
     let final_jump = "CLOSURE_CODE rbx, rax\n" in
     let final_jump = final_jump ^ "jmp rbx\n" in
@@ -360,8 +360,8 @@ let generate_lambda_opt stringList get_lambda_counter body =
     | ScmDef'(VarBound(var, major, minor), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_Fvar var fvars) (* check *)
     | ScmDef'(VarFree(var), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_Fvar var fvars) (* check *)
     | ScmOr'(exprList) -> (generate_or (List.map (fun x -> generate_helper consts fvars lambda_counter x) exprList))
-    | ScmLambdaSimple'(stringList, expr) -> (generate_lambda_simple stringList lambda_counter (generate_helper consts fvars lambda_counter expr))
-    | ScmLambdaOpt'(stringList, str, expr) -> (generate_lambda_opt stringList lambda_counter (generate_helper consts fvars lambda_counter expr))
+    | ScmLambdaSimple'(stringList, expr) -> (generate_lambda_simple stringList (lambda_counter()) (generate_helper consts fvars lambda_counter expr))
+    | ScmLambdaOpt'(stringList, str, expr) -> (generate_lambda_opt stringList (lambda_counter()) (generate_helper consts fvars lambda_counter expr))
     | ScmApplic'(expr, exprList) -> (generate_applic (List.map (fun x -> generate_helper consts fvars lambda_counter x) exprList) (generate_helper consts fvars lambda_counter expr))
     | ScmApplicTP'(expr, exprList) -> (generate_applicTP (List.map (fun x -> generate_helper consts fvars lambda_counter x) exprList) (generate_helper consts fvars lambda_counter expr))
     ;;
