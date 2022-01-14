@@ -209,9 +209,11 @@ module Code_Gen : CODE_GEN = struct
     str ^ "mov rax, SOB_VOID_ADDRESS\n";;
 
   let get_bound_var minor major = 
-    let str = "mov rax, qword [rbp+8∗2]\n" in
-    let str = str ^ "mov rax, qword [rax+8∗" ^ major ^ "]\n" in
-    str ^ "mov rax, qword [rax+8∗" ^ minor ^ "]\n";;
+    let str = "mov rbx, qword [rbp+16] ; rbx = env\n" in
+    let str = str ^ "mov rcx, "^ major ^" ;rcx = major\n" in
+    let str = str ^ "GET_N_ITEM rdx, rbx, rcx ; rdx = specific env\n" in
+    let str = str ^ "mov rbx, " ^ minor ^ "; rbx = minor\n" in
+    str ^ "GET_N_ITEM rax, rdx, rbx\n";;
 
   let set_bound_var minor major = 
     let str = "mov rbx, qword [rbp+8∗2]\n" in
@@ -241,17 +243,8 @@ module Code_Gen : CODE_GEN = struct
 let lambda_counter = make_counter ()
 
 let generate_lambda_env stringList num_of_lambda body = 
-  let env_pointer = "mov rax, qword [rbp+8*2] ; in rax pointer last env\n" in (* rax = LastEnv*)
-  let env_pointer = env_pointer ^ "sub rax, 8\n" in
-  let env_pointer = env_pointer ^ "mov rbx, [rax+1] ; rbx stores last env size\n" in
-  let env_pointer = env_pointer ^ "add rbx, 1\n" in
-  let malloc_env = "MAKE_VECTOR rcx, rbx, rax\n" in
-  let rbx_vector_size = "mov rbx, qword [rbp+8*3]\n" in
-  let rbx_vector_size = rbx_vector_size ^ "add rbx, 1\n" in
-  let malloc_vector = "mov rax, qword [rbp+8*4]\nMAKE_VECTOR rdx, rbx, rax\n" in (*check*)
-  let mov_current = "mov qword [rcx], rdx\n" in
-  let env = env_pointer ^ malloc_env ^ rbx_vector_size ^ malloc_vector ^ mov_current in
-  let env = if num_of_lambda = 1 then "MAKE_VECTOR rcx, 0, rax\n" else env in
+  let env = "EXTAND_ENV_RCX\n" in
+  let env = if num_of_lambda = 1 then "mov rcx, SOB_NIL_ADDRESS\n" else env in
   env
     
 let generate_lambda_simple stringList num_of_lambda body =
@@ -280,23 +273,14 @@ let generate_opt_last_arg num_of_args_without_opt counter =
   (get_magic_pointer ^ get_last_non_opt_arg_index ^ generate_pair)
 
 let generate_lambda_opt stringList num_of_lambda body =
-  (*start generate env*)
   let env = generate_lambda_env stringList num_of_lambda body in
-  (* end generate env*)
-  (* allocate closure*)
   let make_closure = "MAKE_CLOSURE(rax, rcx, Lcode" ^ (Int.to_string num_of_lambda) ^ ")\n" in
   let closure_body = "jmp Lcont" ^ (Int.to_string num_of_lambda) ^ "\n" in
   let closure_body = closure_body ^ "Lcode" ^ (Int.to_string num_of_lambda) ^ ":\npush rbp\nmov rbp, rsp\n" in
   let num_of_args_without_opt = ((List.length stringList)) in
-(* let vector_size = "mov rbx, qword [rbp+8*3]\n" in
-  let vector_size = vector_size ^ "sub rbx," ^ (Int.to_string real_num_of_args) ^ "\n" in
-  let make_vector = "mov rcx, rbp\nadd rcx, " ^ (Int.to_string ((real_num_of_args + 3)*8)) ^"\nMAKE_VECTOR rdx, rbx, rcx\n" in
-  let make_vector = make_vector ^ "mov qword [rbp+8*" ^ (Int.to_string (real_num_of_args + 3)) ^"], rdx\n" in*)
   let make_list_of_args = (generate_opt_last_arg num_of_args_without_opt num_of_lambda) in
-  (* let change_num_of_args = "mov qword [rbp + 8*3], " ^ (Int.to_string real_num_of_args) ^ "\n" in *)
   let closure_body2 = body ^ "leave\nret\nLcont" ^ (Int.to_string num_of_lambda) ^ ":\n" in
   (env ^ make_closure ^ closure_body ^ make_list_of_args ^ closure_body2);;
-  (* (env ^ make_closure ^ closure_body ^ vector_size ^ make_vector ^ change_num_of_args ^ closure_body2);; *)
 
   let generate_applic arg_list proc =
     let make_args = (List.fold_right (fun arg init -> init ^ arg ^ "push rax\n") arg_list "push SOB_NIL_ADDRESS\n") in
@@ -312,34 +296,15 @@ let generate_lambda_opt stringList num_of_lambda body =
 
   let generate_applicTP arg_list proc =
     let arg_count = (List.length arg_list) in
-    let index = (get_counter()) in
     let make_args = (List.fold_right (fun arg init -> init ^ arg ^ "push rax\n") arg_list "push SOB_NIL_ADDRESS\n") in
     let push_n = "push " ^ (Int.to_string (arg_count+1)) ^ "\n" in
     let get_closure = proc ^ "CLOSURE_ENV rbx, rax\n" in
     let get_closure = get_closure ^ "push rbx\n" in
-    let save_ret_address = "push qword [rbp+8]\n" in
-    let get_frame_pointer = "mov rcx, rbp\n" in
-    let get_frame_pointer = get_frame_pointer ^ "sub rcx, 8\n" in
-    let num_of_args_old_frame = "mov rbx, qword [rcx+4*8]\n" in
-    let start_of_old_frame = "imul rbx, 8\n" in
-    let start_of_old_frame = start_of_old_frame ^ "add rbx, rcx\n" in
-    let start_of_old_frame = start_of_old_frame ^ "add rbx, 32\n" in 
-    let make_loop = "LOOP" ^ index ^ ":\n
-    cmp rcx, rsp\n
-    je END_LOOP" ^ index ^ "\n
-    mov rdx, [rcx]\n
-    mov [rbx], rdx\n
-    add rcx, 8\n
-    add rbx, 8\n
-    jmp LOOP" ^ index ^ "\n
-    END_LOOP" ^ index ^ ":\n" in
-    let move_frame_code = (get_frame_pointer ^ num_of_args_old_frame ^ start_of_old_frame ^ make_loop) in
-    let final_jump = "CLOSURE_CODE rbx, rax\n" in
+    let save_ret_address = "push qword [rbp+8]\npush rax\n" in
+    let fix_stack = "FIX_STACK\n" in
+    let final_jump = "pop rax\nCLOSURE_CODE rbx, rax\n" in
     let final_jump = final_jump ^ "jmp rbx\n" in
-    let finish_applic = "add rsp, 8 ; pop env\n
-    pop rbx ; pop arg count\n
-    lea rsp , [rsp+8*rbx]\n" in
-    (make_args ^ push_n ^ get_closure ^ save_ret_address ^ move_frame_code ^ final_jump ^ finish_applic);;
+    (make_args ^ push_n ^ get_closure ^ save_ret_address ^ fix_stack ^ final_jump);;
 (*
     generate define == generate set
 *)
@@ -368,7 +333,7 @@ let generate_lambda_opt stringList num_of_lambda body =
   
 
   let generate consts fvars e =
-    let lambda_counter = make_counter() in
+   let lambda_counter = make_counter() in
     let get_lambda_counter () = 
       begin
       (snd lambda_counter)();

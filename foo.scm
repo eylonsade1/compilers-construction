@@ -1,1 +1,1 @@
-((lambda () ((lambda () 2)) 2))
+((lambda (x) ((lambda () x))) 1)

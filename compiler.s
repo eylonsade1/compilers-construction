@@ -126,7 +126,7 @@
     mov rcx, %2
 %%vector_loop:
     cmp rcx, 0
-    je %%vector_loop_end
+    js %%vector_loop_end
     mov rbx, [%3]
     mov [%1], rbx
     add %1, WORD_SIZE
@@ -158,6 +158,89 @@
 %macro MAKE_LITERAL 2
 		db %1
         %2
+%endmacro
+
+%macro push_regs 0
+	push rax
+	push rbx
+	push rdx
+%endmacro
+
+%macro pop_regs 0
+	pop rdx
+	pop rbx
+	pop rax
+%endmacro
+
+;working
+%macro GET_N_ITEM 3 ;1=reg 2=list(reg), 3=argNum
+	%%START_GET_ITEM_LOOP:
+	cmp %3, 0
+	je %%END_GET_ITEM_LOOP
+	mov %1, %2
+	CDR %2, %1
+	sub %3, 1
+	jmp %%START_GET_ITEM_LOOP
+	%%END_GET_ITEM_LOOP:
+	CAR %1, %2
+%endmacro
+
+%macro EXTAND_ENV_RCX 0
+	push_regs
+	MOV_ARGS_TO_LIST_RBX
+	mov rax, qword [rbp+16] ;rax = last env
+	MAKE_PAIR(rcx, rbx, rax)
+	pop_regs
+%endmacro
+
+;working
+%macro MOV_ARGS_TO_LIST_RBX 0
+	mov rcx, rbp
+	add rcx, 24  	; num of args pointer
+	mov rbx,qword [rcx] ; rbx = num of args
+	imul rbx, 8         
+	add rcx, rbx        ; rcx = last arg (magic)
+	mov rax, rcx
+	sub rax, 8			; rax = arg under the magic
+	mov rdx, rbp		
+	add rdx, 24			; rdx = num of args (stop pointer for loop)
+	mov rbx, SOB_NIL_ADDRESS
+	%%MAKE_LIST_LOOP:
+	cmp rdx,rax			; while (rax != pointer to num of args)
+	je %%END_MAKE_LIST_LOOP
+	push rax
+	mov rax, qword [rax]
+	mov rcx, rbx
+	MAKE_PAIR(rbx, rax, rcx)
+	pop rax
+	sub rax, 8
+	jmp %%MAKE_LIST_LOOP
+	%%END_MAKE_LIST_LOOP:
+%endmacro
+
+%macro FIX_STACK 0
+	mov rbx, rsp         ;
+	sub rbx, 8			 ;rbx = current rbp
+	mov rcx, rbp 		 ;rcx = old rbp
+	mov rax, [rcx+24]    ;rax = old num of args
+	imul rax, 8          ;rax = old num of args size
+	add rax, 24          ;rax = 24 + n*8
+	add rax, rcx		 ;rax = old magic
+	mov rdx, rcx         ;rdx = old rbp
+	add rdx, 8   		 ;rdx = old ret address
+	mov rsp, rax		 ;rsp = old magic
+	add rsp, 8
+	mov rax, rcx         ;rax = old rbp
+	sub rax, 8           ;rax = current magic
+	; rax = current magic , rbx = current rbp(should be), rcx = old rbp(not in use) , rdx = return address
+	%%FIX_STACK_LOOP:
+	cmp rax, rbx
+	je %%END_FIX_STACK_LOOP
+	mov rcx, qword [rax]
+	push rcx
+	sub rax, 8
+	jmp %%FIX_STACK_LOOP
+	%%END_FIX_STACK_LOOP:
 %endmacro
 
 %define MAKE_RATIONAL(r, num, den) \
