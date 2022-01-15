@@ -285,7 +285,7 @@
 %endmacro
 
 %define MAKE_LITERAL_SYMBOL(addr) \
-	MAKE_LITERAL T_CHAR, dq addr
+	MAKE_LITERAL T_SYMBOL, dq addr
 
 %define MAKE_LITERAL_RATIONAL(num, den) \
 	MAKE_WORDS_LIT T_RATIONAL, num, den
