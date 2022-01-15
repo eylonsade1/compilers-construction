@@ -33,7 +33,7 @@
 
 (define cons*
  (lambda lst
-   (fold-right cons lst '())))
+   (fold-right cons '() lst)))
    
 (define append
   (let ((null? null?)

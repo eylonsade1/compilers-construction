@@ -310,16 +310,17 @@
 %endmacro
 
 %macro FIX_STACK 0
-	mov rbx, rsp         ;
-	sub rbx, 8			 ;rbx = current rbp
-	mov rcx, rbp 		 ;rcx = old rbp
+	mov rbx, rsp         ;rbx = current rbp pointer place
+	sub rbx, 8			 ;rbx = one below the rbp pointer (to pass closure)
+	mov rcx,  rbp  		 ;rcx = old rbp
+	mov rbp, qword [rcx]
 	mov rax, [rcx+24]    ;rax = old num of args
 	imul rax, 8          ;rax = old num of args size
 	add rax, 24          ;rax = 24 + n*8
 	add rax, rcx		 ;rax = old magic
 	mov rdx, rcx         ;rdx = old rbp
-	add rdx, 8   		 ;rdx = old ret address
-	mov rsp, rax		 ;rsp = old magic
+	add rdx, 8   		 ;rdx = old ret address pointer
+	mov rsp, rax		 ;rsp = old magic pointer
 	add rsp, 8
 	mov rax, rcx         ;rax = old rbp
 	sub rax, 8           ;rax = current magic

@@ -81,7 +81,7 @@ module Code_Gen : CODE_GEN = struct
       | ScmNumber(x) -> [ScmNumber(x)]
       | ScmString(s) -> [ScmString(s)]
       | ScmPair(car, cdr) -> (expand_if_needed car) @ ((expand_if_needed cdr) @ [ScmPair(car, cdr)])
-      | ScmSymbol(x) -> [ScmString(x)] 
+      | ScmSymbol(x) -> [ScmString(x)] @ [ScmSymbol(x)]
       | ScmVector(list) -> (List.fold_left (fun init ex -> init @ (expand_if_needed ex)) [] list) @ [ScmVector(list)]
       ;;
 
