@@ -172,6 +172,22 @@
 	pop rax
 %endmacro
 
+
+%macro GET_N_ITEM_POINTER 3
+	push_regs
+	%%START_GET_ITEM_LOOP:
+	cmp %3, 0
+	je %%END_GET_ITEM_LOOP
+	mov %1, %2
+	CDR %2, %1
+	sub %3, 1
+	jmp %%START_GET_ITEM_LOOP
+	%%END_GET_ITEM_LOOP:
+	mov %1, %2
+	add %1, TYPE_SIZE
+	pop_regs
+%endmacro
+
 ;working
 %macro GET_N_ITEM 3 ;1=reg 2=list(reg), 3=argNum
 	%%START_GET_ITEM_LOOP:
