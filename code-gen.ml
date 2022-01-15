@@ -205,7 +205,7 @@ module Code_Gen : CODE_GEN = struct
     str ^ "mov rax, SOB_VOID_ADDRESS\n";;
 
   let set_var_param minor = 
-    let str = "mov qword [rbp + 8 ∗ (4 + " ^ minor ^ ")], rax\n" in
+    let str = "mov qword [rbp + 8 ∗ " ^ (4 + minor) ^ "], rax\n" in
     str ^ "mov rax, SOB_VOID_ADDRESS\n";;
 
   let get_bound_var minor major = 
