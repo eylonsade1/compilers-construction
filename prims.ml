@@ -26,6 +26,7 @@ module Prims : PRIMS = struct
          pop rbp
          ret";;
 
+
   (* Many of the low-level stdlib procedures are predicate procedures, which perform 
      some kind of comparison, and then return one of the constants sob_true or sob_false.
      Since this pattern repeats so often, we have a template that takes a body, and a type
@@ -62,6 +63,7 @@ module Prims : PRIMS = struct
   let make_unary label body = make_routine label ("mov rsi, PVAR(0)\n\t" ^ body);;
   let make_binary label body = make_unary label ("mov rdi, PVAR(1)\n\t" ^ body);;
   let make_tertiary label body = make_binary label ("mov rdx, PVAR(2)\n\t" ^ body);;
+
 
   (* All of the type queries in scheme (e.g., null?, pair?, char?, etc.) are equality predicates
      that are implemented by comparing the first byte pointed to by PVAR(0) to the relevant type tag.
@@ -347,8 +349,17 @@ module Prims : PRIMS = struct
          neg rdx
          .make_result:
          MAKE_RATIONAL(rax, rdx, 1)", make_binary, "gcd";  
+  "mov rax, qword [rsi+TYPE_SIZE]", make_unary, "car";
+  "mov rax, qword [rsi+TYPE_SIZE+WORD_SIZE]", make_unary, "cdr";
+  "MAKE_PAIR(rax, rsi, rdi)", make_binary, "cons";
       ] in
     String.concat "\n\n" (List.map (fun (a, b, c) -> (b c a)) misc_parts);;
+
+    let car_func =
+      make_unary "car" ("mov rax, qword [rsi+TYPE_SIZE]");;
+  
+    let cdr_func =
+      make_unary "cdr" ("mov rax, qword [rsi+TYPE_SIZE+WORD_SIZE]");;
 
   (* This is the interface of the module. It constructs a large x86 64-bit string using the routines
      defined above. The main compiler pipline code (in compiler.ml) calls into this module to get the

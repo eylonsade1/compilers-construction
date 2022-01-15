@@ -172,7 +172,6 @@
 	pop rax
 %endmacro
 
-
 %macro GET_N_ITEM_POINTER 3
 	push_regs
 	%%START_GET_ITEM_LOOP:

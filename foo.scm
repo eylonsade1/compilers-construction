@@ -1,1 +1,1 @@
-((lambda (x) x ((lambda () (set! x 7) x)) ((lambda () (set! x 4))) x) 1)
+((lambda (a b c) b) 'a 'b 'c)
