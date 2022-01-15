@@ -253,14 +253,15 @@ let generate_lambda_env stringList num_of_lambda body =
 let generate_lambda_simple stringList num_of_lambda body =
     (*start generate env*)
     let env = generate_lambda_env stringList num_of_lambda body in
+    let label_count = (get_counter()) in
     (* end generate env*)
     (* allocate closure*)
-    let make_closure = "MAKE_CLOSURE(rax, rcx, Lcode" ^ (Int.to_string num_of_lambda) ^ ")\n" in
-    let closure_body = "jmp Lcont" ^ (Int.to_string num_of_lambda) ^ "\n" in
-    let closure_body = closure_body ^ "Lcode" ^ (Int.to_string num_of_lambda) ^ ":\n" in
+    let make_closure = "MAKE_CLOSURE(rax, rcx, Lcode" ^ label_count ^ ")\n" in
+    let closure_body = "jmp Lcont" ^ label_count ^ "\n" in
+    let closure_body = closure_body ^ "Lcode" ^ label_count ^ ":\n" in
     let closure_body = closure_body ^ "push rbp\nmov rbp, rsp\n" in
     let closure_body = closure_body ^ body in
-    let closure_body = closure_body ^ "leave\nret\nLcont" ^ (Int.to_string num_of_lambda) ^ ":\n" in
+    let closure_body = closure_body ^ "leave\nret\nLcont" ^ label_count ^ ":\n" in
     (env ^ make_closure ^ closure_body);;
 
 let generate_opt_last_arg num_of_args_without_opt counter = 
@@ -268,21 +269,22 @@ let generate_opt_last_arg num_of_args_without_opt counter =
   (* let get_magic_pointer = get_magic_pointer ^ "lea rcx, [rbp+8*(3+rbx)]\n" in (*rcx stores pointer to magic*)*)
   let get_magic_pointer = get_magic_pointer ^ "mov rax, rcx\nsub rax, 8\n" in
   let get_last_non_opt_arg_index = "mov rdx, rbp\nadd rdx, "^(Int.to_string (8*(3+num_of_args_without_opt)))^"\n" in
-  let generate_pair = "MAKE_LIST_LOOP" ^ (Int.to_string counter) ^ ":\n" in
-  let generate_pair = generate_pair ^ "cmp rdx,rax\nje END_MAKE_LIST_LOOP" ^ (Int.to_string counter) ^ "\n" in
+  let generate_pair = "MAKE_LIST_LOOP" ^ counter ^ ":\n" in
+  let generate_pair = generate_pair ^ "cmp rdx,rax\nje END_MAKE_LIST_LOOP" ^ counter ^ "\n" in
   let generate_pair = generate_pair ^ "push rax\nmov rax, qword [rax]\nmov rcx, qword [rcx]\n" in
   let generate_pair = generate_pair ^ "MAKE_PAIR(rbx, rax, rcx)\npop rax\nmov qword [rax], rbx\nmov rcx, rax\nsub rax, 8\n" in
-  let generate_pair = generate_pair ^ "jmp MAKE_LIST_LOOP" ^ (Int.to_string counter) ^"\nEND_MAKE_LIST_LOOP" ^ (Int.to_string counter) ^":\n" in
+  let generate_pair = generate_pair ^ "jmp MAKE_LIST_LOOP" ^ counter ^"\nEND_MAKE_LIST_LOOP" ^ counter ^":\n" in
   (get_magic_pointer ^ get_last_non_opt_arg_index ^ generate_pair)
 
 let generate_lambda_opt stringList num_of_lambda body =
   let env = generate_lambda_env stringList num_of_lambda body in
-  let make_closure = "MAKE_CLOSURE(rax, rcx, Lcode" ^ (Int.to_string num_of_lambda) ^ ")\n" in
-  let closure_body = "jmp Lcont" ^ (Int.to_string num_of_lambda) ^ "\n" in
-  let closure_body = closure_body ^ "Lcode" ^ (Int.to_string num_of_lambda) ^ ":\npush rbp\nmov rbp, rsp\n" in
+  let label_count = (get_counter()) in
+  let make_closure = "MAKE_CLOSURE(rax, rcx, Lcode" ^ label_count ^ ")\n" in
+  let closure_body = "jmp Lcont" ^ label_count ^ "\n" in
+  let closure_body = closure_body ^ "Lcode" ^ label_count ^ ":\npush rbp\nmov rbp, rsp\n" in
   let num_of_args_without_opt = ((List.length stringList)) in
-  let make_list_of_args = (generate_opt_last_arg num_of_args_without_opt num_of_lambda) in
-  let closure_body2 = body ^ "leave\nret\nLcont" ^ (Int.to_string num_of_lambda) ^ ":\n" in
+  let make_list_of_args = (generate_opt_last_arg num_of_args_without_opt label_count) in
+  let closure_body2 = body ^ "leave\nret\nLcont" ^ label_count ^ ":\n" in
   (env ^ make_closure ^ closure_body ^ make_list_of_args ^ closure_body2);;
 
   let generate_applic arg_list proc =

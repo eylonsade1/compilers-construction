@@ -117,9 +117,9 @@ mov rax, rsp
 mov rax, 0x2
 push rax
 mov rcx, SOB_NIL_ADDRESS
-MAKE_CLOSURE(rax, rcx, Lcode1)
-jmp Lcont1
-Lcode1:
+MAKE_CLOSURE(rax, rcx, Lcode3)
+jmp Lcont3
+Lcode3:
 push rbp
 mov rbp, rsp
 MALLOC rax, 8
@@ -132,9 +132,9 @@ mov rax, rsp
 mov rax, 0x1
 push rax
 EXTAND_ENV_RCX
-MAKE_CLOSURE(rax, rcx, Lcode2)
-jmp Lcont2
-Lcode2:
+MAKE_CLOSURE(rax, rcx, Lcode1)
+jmp Lcont1
+Lcode1:
 push rbp
 mov rbp, rsp
 mov rax, const_tbl+6
@@ -154,7 +154,7 @@ GET_N_ITEM rax, rdx, rbx
 mov rax, qword [rax]
 leave
 ret
-Lcont2:
+Lcont1:
 CLOSURE_ENV rbx, rax
 push rbx
 CLOSURE_CODE rbx, rax
@@ -169,9 +169,9 @@ mov rax, rsp
 mov rax, 0x1
 push rax
 EXTAND_ENV_RCX
-MAKE_CLOSURE(rax, rcx, Lcode3)
-jmp Lcont3
-Lcode3:
+MAKE_CLOSURE(rax, rcx, Lcode2)
+jmp Lcont2
+Lcode2:
 push rbp
 mov rbp, rsp
 mov rax, const_tbl+23
@@ -185,7 +185,7 @@ pop qword [rax]
 mov rax, SOB_VOID_ADDRESS
 leave
 ret
-Lcont3:
+Lcont2:
 CLOSURE_ENV rbx, rax
 push rbx
 CLOSURE_CODE rbx, rax
@@ -199,7 +199,7 @@ mov rax, qword [rbp+32]
 mov rax, qword [rax]
 leave
 ret
-Lcont1:
+Lcont3:
 CLOSURE_ENV rbx, rax
 push rbx
 CLOSURE_CODE rbx, rax
