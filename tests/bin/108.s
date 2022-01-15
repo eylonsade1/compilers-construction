@@ -21,7 +21,7 @@ db T_BOOL, 1
 MAKE_LITERAL_RATIONAL(0, 1)
 MAKE_LITERAL_RATIONAL(1, 1)
 MAKE_LITERAL_RATIONAL(220000, 1)
-MAKE_LITERAL_STRING("whatever")
+MAKE_LITERAL_STRING "whatever"
 MAKE_LITERAL_SYMBOL(const_tbl+57)
 
 ;;; These macro definitions are required for the primitive
@@ -118,26 +118,19 @@ push rax
 mov rax, rsp
 mov rax, 0x2
 push rax
-mov rax, qword [rbp+8*2]
-sub rax, 8
-MAKE_VECTOR rcx, 24, rax
-mov rbx, qword [rbp+8*3]
-add rbx, 1
-mov rax, qword [rbp+8*4]
-MAKE_VECTOR rdx, rbx, rax
-mov qword [rcx], rdx
-MAKE_CLOSURE(rax, rcx, Lcode2)
-jmp Lcont2
-Lcode2:
+mov rcx, SOB_NIL_ADDRESS
+MAKE_CLOSURE(rax, rcx, Lcode1)
+jmp Lcont1
+Lcode1:
 push rbp
 mov rbp, rsp
 MALLOC rax, 8
 mov qword [rbp + 8 ∗ (4 + 0)], rax
 mov rax, SOB_VOID_ADDRESS
-mov rcx, SOB_NIL_ADDRESS
-MAKE_CLOSURE(rax, rcx, Lcode1)
-jmp Lcont1
-Lcode1:
+EXTAND_ENV_RCX
+MAKE_CLOSURE(rax, rcx, Lcode2)
+jmp Lcont2
+Lcode2:
 push rbp
 mov rbp, rsp
 push SOB_NIL_ADDRESS
@@ -158,11 +151,11 @@ add rsp, 8 ; pop env
     pop rbx ; pop arg count
 
     lea rsp , [rsp + 8*rbx]
-cmp rax, .false
-je Lelse2
+cmp rax, SOB_FALSE_ADDRESS
+je Lelse1
 mov rax, const_tbl+6
-jmp Lexit2
-Lelse2:
+jmp Lexit1
+Lelse1:
 push SOB_NIL_ADDRESS
 push SOB_NIL_ADDRESS
 mov rax, const_tbl+23
@@ -184,47 +177,24 @@ add rsp, 8 ; pop env
     lea rsp , [rsp + 8*rbx]
 push rax
 push 2
-mov rax, qword [rbp+8∗2]
-mov rax, qword [rax+8∗0]
-mov rax, qword [rax+8∗0]
+mov rbx, qword [rbp+16] ; rbx = env
+mov rcx, 0 ;rcx = major
+GET_N_ITEM rdx, rbx, rcx ; rdx = specific env
+mov rbx, 0; rbx = minor
+GET_N_ITEM rax, rdx, rbx
 mov rax, qword [rax]
-CLOSURE_ENV(rbx, rax)
+CLOSURE_ENV rbx, rax
 push rbx
 push qword [rbp+8]
-mov rcx, rbp
-sub rcx, 8
-mov rbx, qword [rcx+4*8]
-mul rbx, 8
-add rbx, rcx
-add rbx, 32
-LOOP1:
-
-                    cmp rcx, esp
-
-                    je END_LOOP1
-
-                    mov rdx, [rcx]
-
-                    mov [rbx], rdx
-
-                    add rcx, 8
-
-                    add rbx, 8
-
-                    jmp LOOP1
-
-                    END_LOOP1:
+push rax
+FIX_STACK
+pop rax
 CLOSURE_CODE rbx, rax
 jmp rbx
-add rsp, 8 ; pop env
-
-    pop rbx ; pop arg count
-
-    lea rsp , [rsp+8*rbx]
-Lexit2:
+Lexit1:
 leave
 ret
-Lcont1:
+Lcont2:
 push rax
 mov rax, qword [rbp+32]
 pop qword [rax]
@@ -235,42 +205,17 @@ push rax
 push 2
 mov rax, qword [rbp+32]
 mov rax, qword [rax]
-CLOSURE_ENV(rbx, rax)
+CLOSURE_ENV rbx, rax
 push rbx
 push qword [rbp+8]
-mov rcx, rbp
-sub rcx, 8
-mov rbx, qword [rcx+4*8]
-mul rbx, 8
-add rbx, rcx
-add rbx, 32
-LOOP3:
-
-                    cmp rcx, esp
-
-                    je END_LOOP3
-
-                    mov rdx, [rcx]
-
-                    mov [rbx], rdx
-
-                    add rcx, 8
-
-                    add rbx, 8
-
-                    jmp LOOP3
-
-                    END_LOOP3:
+push rax
+FIX_STACK
+pop rax
 CLOSURE_CODE rbx, rax
 jmp rbx
-add rsp, 8 ; pop env
-
-    pop rbx ; pop arg count
-
-    lea rsp , [rsp+8*rbx]
 leave
 ret
-Lcont2:
+Lcont1:
 CLOSURE_ENV rbx, rax
 push rbx
 CLOSURE_CODE rbx, rax

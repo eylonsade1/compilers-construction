@@ -18,9 +18,9 @@ db T_VOID
 db T_NIL
 db T_BOOL, 0
 db T_BOOL, 1
-MAKE_LITERAL_STRING("alpha")
+MAKE_LITERAL_STRING "alpha"
 MAKE_LITERAL_RATIONAL(0, 1)
-MAKE_LITERAL_CHAR(b)
+MAKE_LITERAL_CHAR('b')
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -163,7 +163,7 @@ add rsp, 8 ; pop env
     pop rbx ; pop arg count
 
     lea rsp , [rsp + 8*rbx]
-cmp rax, .false
+cmp rax, SOB_FALSE_ADDRESS
 je Lelse1
 push SOB_NIL_ADDRESS
 push SOB_NIL_ADDRESS

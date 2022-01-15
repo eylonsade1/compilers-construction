@@ -18,22 +18,22 @@ db T_VOID
 db T_NIL
 db T_BOOL, 0
 db T_BOOL, 1
-MAKE_LITERAL_CHAR(v)
-MAKE_LITERAL_CHAR(e)
-MAKE_LITERAL_CHAR(c)
-MAKE_LITERAL_CHAR(t)
-MAKE_LITERAL_CHAR(o)
-MAKE_LITERAL_CHAR(r)
-MAKE_LITERAL_CHAR(s)
-MAKE_LITERAL_CHAR(f)
-MAKE_LITERAL_VECTOR(const_tbl+14, const_tbl+20)
-MAKE_LITERAL_VECTOR(const_tbl+18, const_tbl+22, const_tbl+6)
-MAKE_LITERAL_VECTOR(const_tbl+16, const_tbl+47, const_tbl+8)
-MAKE_LITERAL_VECTOR(const_tbl+14, const_tbl+80, const_tbl+10)
-MAKE_LITERAL_VECTOR(const_tbl+12, const_tbl+113, const_tbl+12)
-MAKE_LITERAL_VECTOR(const_tbl+10, const_tbl+146, const_tbl+14)
-MAKE_LITERAL_VECTOR(const_tbl+8, const_tbl+179, const_tbl+16)
-MAKE_LITERAL_VECTOR(const_tbl+6, const_tbl+212, const_tbl+18)
+MAKE_LITERAL_CHAR('v')
+MAKE_LITERAL_CHAR('e')
+MAKE_LITERAL_CHAR('c')
+MAKE_LITERAL_CHAR('t')
+MAKE_LITERAL_CHAR('o')
+MAKE_LITERAL_CHAR('r')
+MAKE_LITERAL_CHAR('s')
+MAKE_LITERAL_CHAR('f')
+MAKE_LITERAL_VECTOR const_tbl+14, const_tbl+20
+MAKE_LITERAL_VECTOR const_tbl+18, const_tbl+22, const_tbl+6
+MAKE_LITERAL_VECTOR const_tbl+16, const_tbl+47, const_tbl+8
+MAKE_LITERAL_VECTOR const_tbl+14, const_tbl+80, const_tbl+10
+MAKE_LITERAL_VECTOR const_tbl+12, const_tbl+113, const_tbl+12
+MAKE_LITERAL_VECTOR const_tbl+10, const_tbl+146, const_tbl+14
+MAKE_LITERAL_VECTOR const_tbl+8, const_tbl+179, const_tbl+16
+MAKE_LITERAL_VECTOR const_tbl+6, const_tbl+212, const_tbl+18
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly

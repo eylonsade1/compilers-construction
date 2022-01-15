@@ -252,6 +252,26 @@
 %define MAKE_LITERAL_CHAR(ch) \
 	MAKE_LITERAL T_CHAR, db ch
 
+%macro MAKE_LITERAL_STRING 1
+	db T_STRING
+	dq (%%end_str - %%str)
+%%str:
+	db %1
+%%end_str:
+%endmacro
+
+%macro MAKE_LITERAL_VECTOR 0-*
+	db T_VECTOR
+	dq %0
+%rep %0
+	dq %1
+%rotate 1
+%endrep
+%endmacro
+
+%define MAKE_LITERAL_SYMBOL(addr) \
+	MAKE_LITERAL T_CHAR, dq addr
+
 %define MAKE_LITERAL_RATIONAL(num, den) \
 	MAKE_WORDS_LIT T_RATIONAL, num, den
 	
