@@ -18,7 +18,6 @@
     (lambda (f . args)
       (map-many f args)))))
 
-(map (lambda (x) (+ x 1)) '(1 2 3))
 
 (define fold-left
   (lambda (fun init lst)
@@ -26,18 +25,47 @@
         init
         (fold-left fun (fun init (car lst)) (cdr lst)))))
 
-(fold-left + 3 '(1 2))
-
 (define fold-right
   (lambda (fun init lst)
     (if (eq? lst '())
         init
         (fun (car lst) (fold-right fun init (cdr lst))))))
 
-(fold-right + 3 '(1 2))
-
 (define cons*
  (lambda lst
    (fold-right cons '() lst)))
+   
+(define append
+  (let ((null? null?)
+	(fold-right fold-right)
+	(cons cons))
+    (lambda args
+      (fold-right
+       (lambda (e a)
+	 (if (null? a)
+	     e
+	     (fold-right cons a e)))
+       '() args))))
 
-(cons* 1 2 3 4 5 6)
+(define list (lambda x x))
+
+(define list? 
+  (let ((null? null?)
+	(pair? pair?)
+	(cdr cdr))
+    (letrec ((list?-loop
+	      (lambda (x)
+		(or (null? x)
+		    (and (pair? x)
+			 (list?-loop (cdr x)))))))
+      list?-loop)))
+
+(define make-string
+  (let ((null? null?) (car car)
+	(make-string make-string))
+    (lambda (x . y)
+      (if (null? y)
+	  (make-string x #\nul)
+	  (make-string x (car y))))))
+
+(make-string 3 #\c)

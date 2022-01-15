@@ -185,7 +185,8 @@
                 (make_named_char "page" '\012');
                 (make_named_char "return" '\r');
                 (make_named_char "space" ' ');
-                (make_named_char "tab" '\t')] in
+                (make_named_char "tab" '\t');
+                (make_named_char "nul" '\000')] in
    nt1 str
  and nt_char_hex str = 
    let chars = range 'a' 'f' in
