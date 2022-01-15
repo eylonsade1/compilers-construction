@@ -215,10 +215,13 @@ module Code_Gen : CODE_GEN = struct
     let str = str ^ "mov rbx, " ^ minor ^ "; rbx = minor\n" in
     str ^ "GET_N_ITEM rax, rdx, rbx\n";;
 
+  (*fix*)
   let set_bound_var minor major = 
-    let str = "mov rbx, qword [rbp+8∗2]\n" in
-    let str = str ^ "mov rbx, qword [rbx+8 ∗ " ^ major ^ "]\n" in 
-    let str = str ^ "mov qword [rbx + 8 ∗ " ^ minor ^ "], rax\n" in
+    let str = "push rax\nmov rbx, qword [rbp+16] ; rbx = env\n" in
+    let str = str ^ "mov rax, "^ major ^" ;rax = major\n" in
+    let str = str ^ "GET_N_ITEM_POINTER rcx, rbx, rax ; rcx = specific env\n" in
+    let str = str ^ "mov rbx, " ^ minor ^ "; rbx = minor\n" in
+    let str = str ^ "mov rdx,qword [rcx]\nGET_N_ITEM_POINTER rcx, rdx, rbx\npop rax\nmov qword [rcx], rax\n"in
     str ^ "mov rax, SOB_VOID_ADDRESS\n";;
     
   let generate_or strList = 
