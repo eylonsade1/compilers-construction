@@ -1,2 +1,2 @@
-(equal? '() '(1
+(equal? '() '((dani (avi (yosi (haim moshe))))
 ) )

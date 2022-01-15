@@ -26,10 +26,10 @@
         (fold-left fun (fun init (car lst)) (cdr lst)))))
 
 (define fold-right
-  (lambda (fun lst init)
+  (lambda (fun init lst)
     (if (eq? lst '())
         init
-        (fun (car lst) (fold-right fun (cdr lst) init)))))
+        (fun (car lst) (fold-right fun init (cdr lst))))))
 
 (define cons*
  (lambda lst
