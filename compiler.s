@@ -174,7 +174,7 @@
 	pop rax
 %endmacro
 
-%macro GET_N_ITEM_POINTER 3
+%macro GET_N_ITEM_POINTER 3   ;1=rcx(result)   2=list    ,3 = n
 	push_regs
 	%%START_GET_ITEM_LOOP:
 	cmp %3, 0
@@ -187,6 +187,80 @@
 	mov %1, %2
 	add %1, TYPE_SIZE
 	pop_regs
+%endmacro
+
+
+;working
+%macro MOV_ARGS_TO_LIST_FOR_APPLY_TO_RBX 0
+	mov rcx, rbp
+	add rcx, 24  	; num of args pointer
+	mov rbx,qword [rcx] ; rbx = num of args
+	imul rbx, 8         
+	add rcx, rbx        ; rcx = last arg (magic)
+	mov rax, rcx
+	sub rax, 8			; rax = arg under the magic
+	mov rdx, rbp		
+	add rdx, 24			; rdx = num of args (stop pointer for loop)
+	add rdx, 8			; rdx = first arg
+	mov rbx, qword [rax]		; rbx = arg(n) real not magic
+	sub rax, 8			; rax = arg(n-1)
+	; rax = arg(n-1)  , rbx = arg(n), rcx = magic(not necesery), rdx = first arg
+	%%MAKE_LIST_LOOP:
+	cmp rdx,rax			; while (rax != pointer to num of args)
+	je %%END_MAKE_LIST_LOOP
+	push rax
+	mov rax, qword [rax]
+	mov rcx, rbx
+	MAKE_PAIR(rbx, rax, rcx)
+	pop rax
+	sub rax, 8
+	jmp %%MAKE_LIST_LOOP
+	%%END_MAKE_LIST_LOOP:
+%endmacro
+
+%macro APPLY_MACRO 0  ; rax = num of args to push, rbx = list, rcx = arg i , rdx = loop counter
+	MOV_ARGS_TO_LIST_FOR_APPLY_TO_RBX ; rbx = list of all args
+	GET_LIST_LENGTH_RCX rbx			  ; rcx = list length original	
+	mov rax, rcx   					  ; rax = num of args
+	add rax, 1						  ; rax = num of args included magic
+	mov rdx, rcx 					  ; rdx = list length
+	sub rdx, 1						  ; rdx = list length - 1
+	push SOB_NIL_ADDRESS
+	%%START_PUSH_LOOP:
+	cmp rdx, -1
+	je %%END_PUSH_LOOP
+	push_regs
+	GET_N_ITEM rcx, rbx, rdx		  ; rcx = i th arg
+	pop_regs
+	push rcx					      ; push item to the stack
+	sub rdx, 1
+	jmp %%START_PUSH_LOOP
+	%%END_PUSH_LOOP:
+	push rax 					      ; push n (num or args)
+	mov rax, qword [rbp+16]			  
+	push rax  						  ; push env
+	mov rax, qword [rbp+8]
+	push rax						  ; push return addres
+	mov rcx, qword [rbp+32]			  ; rcx = func closure
+	push rcx						  ; push closure
+	FIX_STACK
+	pop rax							  ; rax = func closure
+	CLOSURE_CODE rbx, rax			  ; rbx = func closure code
+	jmp rbx							  ; jmp to closure code (saves the return address)
+%endmacro
+
+%macro GET_LIST_LENGTH_RCX 1
+	push rbx 
+	mov rcx, 0			;rcx = counter
+	%%START_GET_LOOP:
+	cmp %1, SOB_NIL_ADDRESS
+	je %%END_GET_LOOP
+	CDR rdx, %1     	;rdx = list cdr
+	mov %1, rdx
+	add rcx, 1     	    ;rcx++
+	jmp %%START_GET_LOOP
+	%%END_GET_LOOP:
+	pop rbx
 %endmacro
 
 ;working

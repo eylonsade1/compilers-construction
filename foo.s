@@ -10,7 +10,7 @@ malloc_pointer:
 ;;; here we REServe enough Quad-words (64-bit "cells") for the free variables
 ;;; each free variable has 8 bytes reserved for a 64-bit pointer to its value
 fvar_tbl:
-    resq 49
+    resq 48
 
 section .data
 const_tbl:
@@ -22,9 +22,6 @@ MAKE_LITERAL_RATIONAL(1, 1)
 MAKE_LITERAL_RATIONAL(2, 1)
 MAKE_LITERAL_RATIONAL(3, 1)
 MAKE_LITERAL_PAIR(const_tbl+40, const_tbl+1)
-MAKE_LITERAL_PAIR(const_tbl+23, const_tbl+57)
-MAKE_LITERAL_PAIR(const_tbl+6, const_tbl+74)
-MAKE_LITERAL_RATIONAL(4, 1)
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -119,26 +116,57 @@ MAKE_CLOSURE(rax, SOB_NIL_ADDRESS, set_car)
 mov [fvar_tbl+304], rax
 MAKE_CLOSURE(rax, SOB_NIL_ADDRESS, set_cdr)
 mov [fvar_tbl+312], rax
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS, apply)
+mov [fvar_tbl+64], rax
 
 user_code_fragment:
 ;;; The code you compiled will be added here.
 ;;; It will be executed immediately after the closures for 
 ;;; the primitive procedures are set up.
-mov rax, const_tbl+91
-mov qword [fvar_tbl+384], rax
-mov rax, SOB_VOID_ADDRESS
-
-	call write_sob_if_not_void
-
 push SOB_NIL_ADDRESS
-mov rax, const_tbl+108
+mov rax, const_tbl+57
 push rax
-mov rax, qword [fvar_tbl+384]
+mov rax, const_tbl+23
+push rax
+mov rax, const_tbl+6
+push rax
+mov rcx, SOB_NIL_ADDRESS
+MAKE_CLOSURE(rax, rcx, Lcode1)
+jmp Lcont1
+Lcode1:
+push rbp
+mov rbp, rsp
+mov rcx, rbp
+add rcx, 24
+mov rbx,qword [rcx]
+imul rbx, 8
+add rcx, rbx
+mov rax, rcx
+sub rax, 8
+mov rdx, rbp
+add rdx, 24
+MAKE_LIST_LOOP1:
+cmp rdx,rax
+je END_MAKE_LIST_LOOP1
+push rax
+mov rax, qword [rax]
+mov rcx, qword [rcx]
+MAKE_PAIR(rbx, rax, rcx)
+pop rax
+mov qword [rax], rbx
+mov rcx, rax
+sub rax, 8
+jmp MAKE_LIST_LOOP1
+END_MAKE_LIST_LOOP1:
+mov rax, qword [rbp+32]
+leave
+ret
+Lcont1:
 push rax
 mov rax, rsp
-mov rax, 0x3
+mov rax, 0x5
 push rax
-mov rax, qword [fvar_tbl+304]
+mov rax, qword [fvar_tbl+64]
 CLOSURE_ENV rbx, rax
 push rbx
 CLOSURE_CODE rbx, rax
@@ -148,35 +176,6 @@ add rsp, 8 ; pop env
     pop rbx ; pop arg count
 
     lea rsp , [rsp + 8*rbx]
-
-	call write_sob_if_not_void
-
-mov rax, qword [fvar_tbl+384]
-
-	call write_sob_if_not_void
-
-push SOB_NIL_ADDRESS
-mov rax, const_tbl+1
-push rax
-mov rax, qword [fvar_tbl+384]
-push rax
-mov rax, rsp
-mov rax, 0x3
-push rax
-mov rax, qword [fvar_tbl+312]
-CLOSURE_ENV rbx, rax
-push rbx
-CLOSURE_CODE rbx, rax
-call rbx
-add rsp, 8 ; pop env
-
-    pop rbx ; pop arg count
-
-    lea rsp , [rsp + 8*rbx]
-
-	call write_sob_if_not_void
-
-mov rax, qword [fvar_tbl+384]
 
 	call write_sob_if_not_void;;; Clean up the dummy frame, set the exit status to 0 ("success"), 
    ;;; and return from main
@@ -767,5 +766,12 @@ set_cdr:
 	mov rdi, PVAR(1)
 	mov qword [rsi+TYPE_SIZE+WORD_SIZE], rdi
 mov rax, SOB_VOID_ADDRESS
+         pop rbp
+         ret
+
+apply:
+       push rbp
+       mov rbp, rsp 
+       APPLY_MACRO
          pop rbp
          ret

@@ -353,7 +353,8 @@ module Prims : PRIMS = struct
   "mov rax, qword [rsi+TYPE_SIZE+WORD_SIZE]", make_unary, "cdr";
   "MAKE_PAIR(rax, rsi, rdi)", make_binary, "cons";
   "mov qword [rsi+TYPE_SIZE], rdi\nmov rax, SOB_VOID_ADDRESS", make_binary, "set_car";
-  "mov qword [rsi+TYPE_SIZE+WORD_SIZE], rdi\nmov rax, SOB_VOID_ADDRESS", make_binary, "set_cdr"
+  "mov qword [rsi+TYPE_SIZE+WORD_SIZE], rdi\nmov rax, SOB_VOID_ADDRESS", make_binary, "set_cdr";
+  "APPLY_MACRO",make_routine ,"apply";
       ] in
     String.concat "\n\n" (List.map (fun (a, b, c) -> (b c a)) misc_parts);;
 
