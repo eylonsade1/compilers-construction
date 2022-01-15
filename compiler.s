@@ -37,7 +37,7 @@
 
 %define STRING_LENGTH SKIP_TYPE_TAG
 %define VECTOR_LENGTH SKIP_TYPE_TAG
-
+%define VECTOR_REF(r, i) qword [r+TYPE_SIZE+WORD_SIZE+i*WORD_SIZE]
 %define SYMBOL_VAL SKIP_TYPE_TAG
 
 %macro STRING_ELEMENTS 2
@@ -87,6 +87,8 @@
 
 %define MAKE_FLOAT(r,val) MAKE_LONG_VALUE r, val, T_FLOAT
 %define MAKE_CHAR(r,val) MAKE_CHAR_VALUE r, val
+%define MAKE_SYMBOL(r,val) MAKE_LONG_VALUE r, val, T_SYMBOL
+
 
 ; Create a string of length %2
 ; from char %3.
@@ -264,6 +266,9 @@
 %define MAKE_LITERAL_FLOAT(val) \
 	MAKE_LITERAL T_FLOAT, dq val
 
+%define MAKE_LITERAL_INT(val) \
+	MAKE_LITERAL T_IN, dq val
+
 %define MAKE_LITERAL_CHAR(ch) \
 	MAKE_LITERAL T_CHAR, db ch
 
@@ -299,7 +304,9 @@
 %define MAKE_CLOSURE(r, env, body) \
         MAKE_TWO_WORDS r, T_CLOSURE, env, body
 
-	
+%define MAKE_LITERAL_CLOSURE(body) \
+        MAKE_WORDS_LIT T_CLOSURE, SOB_NIL_ADDRESS, body
+
 ;;; Macros and routines for printing Scheme OBjects to STDOUT
 %define CHAR_NUL 0
 %define CHAR_TAB 9
