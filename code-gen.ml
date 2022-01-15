@@ -205,7 +205,7 @@ module Code_Gen : CODE_GEN = struct
     str ^ "mov rax, SOB_VOID_ADDRESS\n";;
 
   let set_var_param minor = 
-    let str = "mov qword [rbp + 8 ∗ " ^ (4 + minor) ^ "], rax\n" in
+    let str = "mov qword [rbp + 8 ∗ " ^ (Int.to_string (4 + minor)) ^ "], rax\n" in
     str ^ "mov rax, SOB_VOID_ADDRESS\n";;
 
   let get_bound_var minor major = 
@@ -321,7 +321,7 @@ let generate_lambda_opt stringList num_of_lambda body =
     | ScmBoxSet'(var, expr) -> (generate_box_set (generate_helper consts fvars lambda_counter expr) (generate_helper consts fvars lambda_counter (ScmVar'(var))))
     | ScmIf'(test, dit, dif) -> (generate_if (generate_helper consts fvars lambda_counter test) (generate_helper consts fvars lambda_counter dit) (generate_helper consts fvars lambda_counter dif))
     | ScmSeq'(exprList) -> (List.fold_left (fun init x -> init ^ (generate_helper consts fvars lambda_counter x)) "" exprList)
-    | ScmSet'(VarParam(_, minor), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_var_param (Int.to_string minor))
+    | ScmSet'(VarParam(_, minor), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_var_param minor)
     | ScmSet'(VarBound(_, major, minor), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_bound_var (Int.to_string minor) (Int.to_string major))
     | ScmSet'(VarFree(var), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_Fvar var fvars)
     | ScmDef'(VarParam(var, minor), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_Fvar var fvars) (* check *)
