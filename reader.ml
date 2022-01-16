@@ -128,9 +128,9 @@
    let packed = pack nt3 (fun (((i, d), m), e) -> 
    match m, e with
    None, None -> float_of_int i 
-   |Some(any1), None -> float_of_string((string_of_int i)^(string_of_float any1)) 
+   |Some(any1), None -> float_of_string((string_of_int i)^(String.sub (string_of_float any1) 1 ((String.length (string_of_float any1)) - 1))) 
    |None, Some(any2) -> float_of_int(i) *. any2 
-   |Some(any3), Some(any4) -> float_of_string((string_of_int i)^(string_of_float any3)) *. any4 ) in
+   |Some(any3), Some(any4) -> float_of_string((string_of_int i)^(String.sub (string_of_float any3)) 1 ((String.length (string_of_float any3)) - 1)) *. any4 ) in
    packed str
  and nt_float_B str = 
    let nt_dot = char '.' in
