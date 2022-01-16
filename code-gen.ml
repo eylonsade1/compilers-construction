@@ -104,6 +104,11 @@ module Code_Gen : CODE_GEN = struct
     | (a, (num, b)) -> num
     ;;
 
+  let rec str_to_char_l = function
+    | "" -> ""
+    | str -> (Int.to_string (Char.code (String.get str 0)) ^ ", " ^ (str_to_char_l (String.sub str 1 ((String.length str) -1))))
+
+
   let pack_with_strings ex init = 
     match ex with
     | [ScmNil, num] -> [ScmNil, (num, "db T_NIL")]
@@ -113,7 +118,7 @@ module Code_Gen : CODE_GEN = struct
     | [ScmChar(ch), num] -> [ScmChar(ch), (num, "MAKE_LITERAL_CHAR(" ^ (Int.to_string (Char.code ch)) ^ ")")]
     | [ScmNumber(ScmRational(x, y)), num] -> [ScmNumber(ScmRational(x, y)), (num, "MAKE_LITERAL_RATIONAL("^(Int.to_string x)^", "^(Int.to_string y)^")")] (*check*)
     | [ScmNumber(ScmReal(x)), num] -> [ScmNumber(ScmReal(x)), (num, "MAKE_LITERAL_FLOAT(" ^ (Float.to_string (x)) ^ ")")]
-    | [ScmString(s), num] -> [ScmString(s), (num, "MAKE_LITERAL_STRING \"" ^ s ^ "\"")]
+    | [ScmString(s), num] -> [ScmString(s), (num, "MAKE_LITERAL_STRING " ^ (String.sub (str_to_char_l s) 0 ((String.length (str_to_char_l s))-2)))]
     | [ScmPair(car, cdr), num] -> [ScmPair(car, cdr), (num, "MAKE_LITERAL_PAIR(const_tbl+" ^ (Int.to_string (find_offset car init)) ^ ", const_tbl+" ^ (Int.to_string (find_offset cdr init)) ^ ")")]
     | [ScmSymbol(x), num] -> [ScmSymbol(x), (num, "MAKE_LITERAL_SYMBOL(const_tbl+" ^ (Int.to_string (find_offset (ScmString(x)) init)) ^ ")")]
     | [ScmVector([]), num] -> [ScmVector([]), (num, "MAKE_LITERAL_VECTOR")]
@@ -289,7 +294,7 @@ let generate_lambda_opt stringList num_of_lambda body =
 
   let generate_applic arg_list proc =
     let make_args = (List.fold_right (fun arg init -> init ^ arg ^ "push rax\n") arg_list "push SOB_NIL_ADDRESS\n") in
-    let push_n = "mov rax, rsp\nmov rax, 0x" ^ (Int.to_string ((List.length arg_list)+1)) ^ "\npush rax\n" in
+    let push_n = "mov rax, rsp\nmov rax, " ^ (Int.to_string ((List.length arg_list)+1)) ^ "\npush rax\n" in
     let call_proc = proc ^ "CLOSURE_ENV rbx, rax\n" in
     let call_proc = call_proc ^ "push rbx\n" in
     let call_proc = call_proc ^ "CLOSURE_CODE rbx, rax\n" in
