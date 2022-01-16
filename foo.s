@@ -18,15 +18,22 @@ db T_VOID
 db T_NIL
 db T_BOOL, 0
 db T_BOOL, 1
-MAKE_LITERAL_STRING "whatever"
+MAKE_LITERAL_STRING 119, 104, 97, 116, 101, 118, 101, 114
 MAKE_LITERAL_SYMBOL(const_tbl+6)
 MAKE_LITERAL_CHAR(0)
 MAKE_LITERAL_RATIONAL(0, 1)
 MAKE_LITERAL_RATIONAL(1, 1)
-MAKE_LITERAL_RATIONAL(10, 1)
+MAKE_LITERAL_RATIONAL(2, 1)
 MAKE_LITERAL_RATIONAL(3, 1)
 MAKE_LITERAL_RATIONAL(4, 1)
 MAKE_LITERAL_RATIONAL(5, 1)
+MAKE_LITERAL_RATIONAL(6, 1)
+MAKE_LITERAL_RATIONAL(7, 1)
+MAKE_LITERAL_RATIONAL(8, 1)
+MAKE_LITERAL_RATIONAL(9, 1)
+MAKE_LITERAL_RATIONAL(10, 1)
+MAKE_LITERAL_RATIONAL(11, 1)
+MAKE_LITERAL_RATIONAL(12, 1)
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -140,7 +147,7 @@ push rax
 mov rax, qword [fvar_tbl+256]
 push rax
 mov rax, rsp
-mov rax, 0x6
+mov rax, 6
 push rax
 mov rcx, SOB_NIL_ADDRESS
 MAKE_CLOSURE(rax, rcx, Lcode7)
@@ -177,7 +184,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -195,7 +202,7 @@ add rsp, 8 ; pop env
     lea rsp , [rsp + 8*rbx]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -228,7 +235,7 @@ mov rbx, 2; rbx = minor
 GET_N_ITEM rax, rdx, rbx
 push rax
 mov rax, rsp
-mov rax, 0x3
+mov rax, 3
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 0 ;rcx = major
@@ -249,7 +256,7 @@ push rax
 mov rax, qword [rbp+32]
 push rax
 mov rax, rsp
-mov rax, 0x3
+mov rax, 3
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 0 ;rcx = major
@@ -278,7 +285,7 @@ mov rbx, 1; rbx = minor
 GET_N_ITEM rax, rdx, rbx
 push rax
 mov rax, rsp
-mov rax, 0x3
+mov rax, 3
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 0 ;rcx = major
@@ -299,7 +306,7 @@ push rax
 mov rax, qword [rbp+32]
 push rax
 mov rax, rsp
-mov rax, 0x3
+mov rax, 3
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -348,7 +355,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -375,7 +382,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -395,7 +402,7 @@ push rax
 mov rax, qword [rbp+32]
 push rax
 mov rax, rsp
-mov rax, 0x3
+mov rax, 3
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 0 ;rcx = major
@@ -418,7 +425,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -436,7 +443,7 @@ add rsp, 8 ; pop env
     lea rsp , [rsp + 8*rbx]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rax, qword [rbp+32]
 CLOSURE_ENV rbx, rax
@@ -562,7 +569,7 @@ push rax
 mov rax, qword [rbp+48]
 push rax
 mov rax, rsp
-mov rax, 0x3
+mov rax, 3
 push rax
 mov rax, qword [fvar_tbl+136]
 CLOSURE_ENV rbx, rax
@@ -584,7 +591,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+48]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rax, qword [fvar_tbl+88]
 CLOSURE_ENV rbx, rax
@@ -602,7 +609,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+48]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rax, qword [fvar_tbl+80]
 CLOSURE_ENV rbx, rax
@@ -618,7 +625,7 @@ push rax
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x3
+mov rax, 3
 push rax
 mov rax, qword [rbp+32]
 CLOSURE_ENV rbx, rax
@@ -664,7 +671,7 @@ push rax
 mov rax, qword [rbp+48]
 push rax
 mov rax, rsp
-mov rax, 0x3
+mov rax, 3
 push rax
 mov rax, qword [fvar_tbl+136]
 CLOSURE_ENV rbx, rax
@@ -687,7 +694,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+48]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rax, qword [fvar_tbl+88]
 CLOSURE_ENV rbx, rax
@@ -705,7 +712,7 @@ push rax
 mov rax, qword [rbp+32]
 push rax
 mov rax, rsp
-mov rax, 0x4
+mov rax, 4
 push rax
 mov rax, qword [fvar_tbl+176]
 CLOSURE_ENV rbx, rax
@@ -722,7 +729,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+48]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rax, qword [fvar_tbl+80]
 CLOSURE_ENV rbx, rax
@@ -815,7 +822,7 @@ push rax
 mov rax, qword [fvar_tbl+256]
 push rax
 mov rax, rsp
-mov rax, 0x4
+mov rax, 4
 push rax
 mov rcx, SOB_NIL_ADDRESS
 MAKE_CLOSURE(rax, rcx, Lcode16)
@@ -866,7 +873,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -996,7 +1003,7 @@ push rax
 mov rax, qword [fvar_tbl+256]
 push rax
 mov rax, rsp
-mov rax, 0x4
+mov rax, 4
 push rax
 mov rcx, SOB_NIL_ADDRESS
 MAKE_CLOSURE(rax, rcx, Lcode22)
@@ -1027,7 +1034,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+32]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -1049,7 +1056,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+32]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -1072,7 +1079,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+32]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -1176,7 +1183,7 @@ push rax
 mov rax, qword [fvar_tbl+256]
 push rax
 mov rax, rsp
-mov rax, 0x4
+mov rax, 4
 push rax
 mov rcx, SOB_NIL_ADDRESS
 MAKE_CLOSURE(rax, rcx, Lcode27)
@@ -1216,7 +1223,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 0 ;rcx = major
@@ -1260,7 +1267,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 0 ;rcx = major
@@ -1342,7 +1349,7 @@ push rax
 mov rax, qword [fvar_tbl+160]
 push rax
 mov rax, rsp
-mov rax, 0x14
+mov rax, 14
 push rax
 mov rcx, SOB_NIL_ADDRESS
 MAKE_CLOSURE(rax, rcx, Lcode47)
@@ -1367,7 +1374,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+32]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -1389,7 +1396,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -1416,7 +1423,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -1455,7 +1462,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+32]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -1477,7 +1484,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -1506,7 +1513,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+32]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -1615,7 +1622,7 @@ mov rbx, 5; rbx = minor
 GET_N_ITEM rax, rdx, rbx
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 0 ;rcx = major
@@ -1692,7 +1699,7 @@ mov rbx, 6; rbx = minor
 GET_N_ITEM rax, rdx, rbx
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 0 ;rcx = major
@@ -1737,7 +1744,7 @@ mov rbx, 7; rbx = minor
 GET_N_ITEM rax, rdx, rbx
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rax, qword [rbp+32]
 CLOSURE_ENV rbx, rax
@@ -1751,7 +1758,7 @@ add rsp, 8 ; pop env
     lea rsp , [rsp + 8*rbx]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 EXTAND_ENV_RCX
 MAKE_CLOSURE(rax, rcx, Lcode38)
@@ -1791,7 +1798,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 2 ;rcx = major
@@ -1903,7 +1910,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 3 ;rcx = major
@@ -1926,7 +1933,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 3 ;rcx = major
@@ -1946,7 +1953,7 @@ push rax
 mov rax, qword [rbp+32]
 push rax
 mov rax, rsp
-mov rax, 0x3
+mov rax, 3
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 1 ;rcx = major
@@ -1969,7 +1976,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 3 ;rcx = major
@@ -1990,7 +1997,7 @@ push SOB_NIL_ADDRESS
 mov rax, qword [rbp+40]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 3 ;rcx = major
@@ -2116,7 +2123,7 @@ mov rbx, 8; rbx = minor
 GET_N_ITEM rax, rdx, rbx
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 0 ;rcx = major
@@ -2134,7 +2141,7 @@ add rsp, 8 ; pop env
     lea rsp , [rsp + 8*rbx]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rax, qword [rbp+32]
 CLOSURE_ENV rbx, rax
@@ -2157,7 +2164,7 @@ mov rbx, 9; rbx = minor
 GET_N_ITEM rax, rdx, rbx
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rbx, qword [rbp+16] ; rbx = env
 mov rcx, 0 ;rcx = major
@@ -2175,7 +2182,7 @@ add rsp, 8 ; pop env
     lea rsp , [rsp + 8*rbx]
 push rax
 mov rax, rsp
-mov rax, 0x2
+mov rax, 2
 push rax
 mov rax, qword [rbp+32]
 CLOSURE_ENV rbx, rax
@@ -2229,6 +2236,20 @@ add rsp, 8 ; pop env
 push SOB_NIL_ADDRESS
 mov rax, const_tbl+1
 push rax
+mov rax, const_tbl+238
+push rax
+mov rax, const_tbl+221
+push rax
+mov rax, const_tbl+204
+push rax
+mov rax, const_tbl+187
+push rax
+mov rax, const_tbl+170
+push rax
+mov rax, const_tbl+153
+push rax
+mov rax, const_tbl+136
+push rax
 mov rax, const_tbl+119
 push rax
 mov rax, const_tbl+102
@@ -2237,10 +2258,57 @@ mov rax, const_tbl+85
 push rax
 mov rax, const_tbl+68
 push rax
-mov rax, qword [fvar_tbl+16]
+mov rax, const_tbl+51
+push rax
+mov rcx, SOB_NIL_ADDRESS
+MAKE_CLOSURE(rax, rcx, Lcode48)
+jmp Lcont48
+Lcode48:
+push rbp
+mov rbp, rsp
+mov rcx, rbp
+add rcx, 24
+mov rbx,qword [rcx]
+imul rbx, 8
+add rcx, rbx
+mov rax, rcx
+sub rax, 8
+mov rdx, rbp
+add rdx, 24
+MAKE_LIST_LOOP48:
+cmp rdx,rax
+je END_MAKE_LIST_LOOP48
+push rax
+mov rax, qword [rax]
+mov rcx, qword [rcx]
+MAKE_PAIR(rbx, rax, rcx)
+pop rax
+mov qword [rax], rbx
+mov rcx, rax
+sub rax, 8
+jmp MAKE_LIST_LOOP48
+END_MAKE_LIST_LOOP48:
+push SOB_NIL_ADDRESS
+mov rax, const_tbl+51
+push rax
+mov rax, qword [rbp+32]
+push rax
+push 3
+mov rax, qword [fvar_tbl+112]
+CLOSURE_ENV rbx, rax
+push rbx
+push qword [rbp+8]
+push rax
+FIX_STACK
+pop rax
+CLOSURE_CODE rbx, rax
+jmp rbx
+leave
+ret
+Lcont48:
 push rax
 mov rax, rsp
-mov rax, 0x7
+mov rax, 15
 push rax
 mov rax, qword [fvar_tbl+64]
 CLOSURE_ENV rbx, rax

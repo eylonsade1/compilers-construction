@@ -344,7 +344,7 @@
 %define MAKE_LITERAL_CHAR(ch) \
 	MAKE_LITERAL T_CHAR, db ch
 
-%macro MAKE_LITERAL_STRING 1
+%macro MAKE_LITERAL_STRING 1+
 	db T_STRING
 	dq (%%end_str - %%str)
 %%str:

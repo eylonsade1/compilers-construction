@@ -105,6 +105,7 @@
       (set! = (^comparator (^numeric-op-dispatcher _=)))
       (set! < (^comparator (^numeric-op-dispatcher _<))))))
 
+(apply (lambda x (cons x 1)) 1 2 3 4 5 6 7 8 9 10 11 12 '())
 
 
 
