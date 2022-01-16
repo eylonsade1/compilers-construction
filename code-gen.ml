@@ -335,20 +335,14 @@ let generate_lambda_opt stringList num_of_lambda body =
     | ScmDef'(VarBound(var, major, minor), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_Fvar var fvars) (* check *)
     | ScmDef'(VarFree(var), expr) -> (generate_helper consts fvars lambda_counter expr) ^ (set_Fvar var fvars) (* check *)
     | ScmOr'(exprList) -> (generate_or (List.map (fun x -> generate_helper consts fvars lambda_counter x) exprList))
-    | ScmLambdaSimple'(stringList, expr) -> (generate_lambda_simple stringList (lambda_counter()) (generate_helper consts fvars lambda_counter expr))
-    | ScmLambdaOpt'(stringList, str, expr) -> (generate_lambda_opt stringList (lambda_counter()) (generate_helper consts fvars lambda_counter expr))
+    | ScmLambdaSimple'(stringList, expr) -> (generate_lambda_simple stringList (lambda_counter + 1) (generate_helper consts fvars (lambda_counter + 1) expr))
+    | ScmLambdaOpt'(stringList, str, expr) -> (generate_lambda_opt stringList (lambda_counter + 1) (generate_helper consts fvars (lambda_counter + 1) expr))
     | ScmApplic'(expr, exprList) -> (generate_applic (List.map (fun x -> generate_helper consts fvars lambda_counter x) exprList) (generate_helper consts fvars lambda_counter expr))
     | ScmApplicTP'(expr, exprList) -> (generate_applicTP (List.map (fun x -> generate_helper consts fvars lambda_counter x) exprList) (generate_helper consts fvars lambda_counter expr))
     ;;
   
 
   let generate consts fvars e =
-   let lambda_counter = make_counter() in
-    let get_lambda_counter () = 
-      begin
-      (snd lambda_counter)();
-      (fst lambda_counter)()
-      end in
-    (generate_helper consts fvars get_lambda_counter e);;
+    (generate_helper consts fvars 0 e);;
 end;;
 
