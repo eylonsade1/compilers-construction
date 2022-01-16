@@ -113,7 +113,7 @@
    packed str
  and nt_mantissa str = 
    let nt1 = plus nt_digit in
-   let packed = pack nt1 (fun s -> int_of_string(list_to_string s)) in
+   let packed = pack nt1 (fun s -> float_of_string("." ^ (list_to_string s))) in
    packed str
  and nt_exponent str = 
    let exponent_token = disj (word_ci "e") (disj (word "*10^") (word "*10**")) in
@@ -128,9 +128,9 @@
    let packed = pack nt3 (fun (((i, d), m), e) -> 
    match m, e with
    None, None -> float_of_int i 
-   |Some(any1), None -> float_of_string((string_of_int i)^"."^(string_of_int any1)) 
+   |Some(any1), None -> float_of_string((string_of_int i)^(string_of_float any1)) 
    |None, Some(any2) -> float_of_int(i) *. any2 
-   |Some(any3), Some(any4) -> float_of_string((string_of_int i)^"."^(string_of_int any3)) *. any4 ) in
+   |Some(any3), Some(any4) -> float_of_string((string_of_int i)^(string_of_float any3)) *. any4 ) in
    packed str
  and nt_float_B str = 
    let nt_dot = char '.' in
@@ -138,8 +138,8 @@
    let nt2 = caten nt1 (maybe nt_exponent) in
    let packed = pack nt2 (fun ((d, m), e) -> 
    match e with
-   None -> float_of_string("0."^(string_of_int m))
-   |Some(exp) -> (float_of_string("0."^(string_of_int m))) *. exp) in
+   None -> float_of_string("0"^(string_of_float m))
+   |Some(exp) -> (float_of_string("0"^(string_of_float m))) *. exp) in
    packed str
  and nt_float_C str = 
    let nt1 = caten nt_integer_part nt_exponent in
@@ -177,7 +177,7 @@
    let nt1 = range '!' '~' in
    nt1 str
  and make_named_char char_name ch =   
-   let nt1 = pack (word char_name) (fun _ -> ch) in
+   let nt1 = pack (word_ci char_name) (fun _ -> ch) in
    nt1
  and nt_char_named str =
    let nt1 =

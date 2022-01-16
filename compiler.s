@@ -341,9 +341,6 @@
 %define MAKE_LITERAL_FLOAT(val) \
 	MAKE_LITERAL T_FLOAT, dq val
 
-%define MAKE_LITERAL_INT(val) \
-	MAKE_LITERAL T_IN, dq val
-
 %define MAKE_LITERAL_CHAR(ch) \
 	MAKE_LITERAL T_CHAR, db ch
 
