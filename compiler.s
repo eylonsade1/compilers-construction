@@ -237,8 +237,11 @@
 	jmp %%START_PUSH_LOOP
 	%%END_PUSH_LOOP:
 	push rax 					      ; push n (num or args)
-	mov rax, qword [rbp+16]			  
-	push rax  						  ; push env
+	;mov rax, qword [rbp+16]			  
+	;push rax  						  ; push env
+	mov rcx, qword [rbp+32]			  ; rcx = closure
+	CLOSURE_ENV rax, rcx 			  ; rax = env
+	push rax						  ; push env
 	mov rax, qword [rbp+8]
 	push rax						  ; push return addres
 	mov rcx, qword [rbp+32]			  ; rcx = func closure
