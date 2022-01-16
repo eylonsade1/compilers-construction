@@ -110,7 +110,7 @@ module Code_Gen : CODE_GEN = struct
     | [ScmVoid, num] -> [ScmVoid, (num, "db T_VOID")]
     | [ScmBoolean(false), num] -> [ScmBoolean(false), (num, "db T_BOOL, 0")]
     | [ScmBoolean(true), num] -> [ScmBoolean(true), (num, "db T_BOOL, 1")]
-    | [ScmChar(ch), num] -> [ScmChar(ch), (num, "MAKE_LITERAL_CHAR('" ^ (Char.escaped ch) ^ "')")]
+    | [ScmChar(ch), num] -> [ScmChar(ch), (num, "MAKE_LITERAL_CHAR(" ^ (Int.to_string (Char.code ch)) ^ ")")]
     | [ScmNumber(ScmRational(x, y)), num] -> [ScmNumber(ScmRational(x, y)), (num, "MAKE_LITERAL_RATIONAL("^(Int.to_string x)^", "^(Int.to_string y)^")")] (*check*)
     | [ScmNumber(ScmReal(x)), num] -> [ScmNumber(ScmReal(x)), (num, "MAKE_LITERAL_FLOAT(" ^ (Float.to_string (x)) ^ ")")]
     | [ScmString(s), num] -> [ScmString(s), (num, "MAKE_LITERAL_STRING \"" ^ s ^ "\"")]

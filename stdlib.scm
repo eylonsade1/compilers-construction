@@ -60,6 +60,10 @@
 			 (list?-loop (cdr x)))))))
       list?-loop)))
 
+(define not
+  (lambda (x) (if x #f #t)))
+
+
 (define make-string
   (let ((null? null?) (car car)
 	(make-string make-string))
@@ -67,9 +71,6 @@
       (if (null? y)
 	  (make-string x #\nul)
 	  (make-string x (car y))))))
-
-(define not
-  (lambda (x) (if x #f #t)))
 
 (let ((flonum? flonum?) (rational? rational?)
       (exact->inexact exact->inexact)

@@ -60,6 +60,10 @@
 			 (list?-loop (cdr x)))))))
       list?-loop)))
 
+(define not
+  (lambda (x) (if x #f #t)))
+
+
 (define make-string
   (let ((null? null?) (car car)
 	(make-string make-string))
@@ -68,4 +72,39 @@
 	  (make-string x #\nul)
 	  (make-string x (car y))))))
 
-(make-string 3 #\c)
+
+
+(let ((flonum? flonum?) (rational? rational?)
+      (exact->inexact exact->inexact)
+      (fold-left fold-left) (map map)
+      (_+ +) (_* *) (_/ /) (_= =) (_< <)
+      (car car) (cdr cdr) (null? null?))
+  (let ((^numeric-op-dispatcher
+	 (lambda (op)
+	   (lambda (x y)
+	     (cond
+	      ((and (flonum? x) (rational? y)) (op x (exact->inexact y)))
+	      ((and (rational? x) (flonum? y)) (op (exact->inexact x) y))
+	      (else (op x y)))))))
+      (set! + (lambda x (fold-left (^numeric-op-dispatcher _+) 0 x)))
+      (set! * (lambda x (fold-left (^numeric-op-dispatcher _*) 1 x)))
+      (set! / (let ((/ (^numeric-op-dispatcher _/)))
+		(lambda (x . y)
+		  (if (null? y)
+		      (/ 1 x)
+		      (fold-left / x y)))))
+    (let ((^comparator
+	   (lambda (op)
+	     (letrec ((comparator
+		       (lambda (x ys)
+			 (or (null? ys)
+			     (and (op x (car ys))
+				  (comparator (car ys) (cdr ys)))))))
+	       (lambda (x . y)
+		 (comparator x y))))))
+      (set! = (^comparator (^numeric-op-dispatcher _=)))
+      (set! < (^comparator (^numeric-op-dispatcher _<))))))
+
+
+
+
