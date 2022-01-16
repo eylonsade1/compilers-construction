@@ -258,6 +258,7 @@ and expand_quasiquote_macro = function
 | ScmSymbol(x) -> ScmPair(ScmSymbol("quote"), ScmPair(ScmSymbol(x), ScmNil)) 
 | ScmChar(x) -> ScmPair(ScmSymbol("quote"), ScmPair(ScmChar(x), ScmNil)) 
 | ScmString(x) -> ScmPair(ScmSymbol("quote"), ScmPair(ScmString(x), ScmNil)) 
+| ScmNumber(x) -> ScmNumber(x)
 | ScmVector(x) -> ScmPair(ScmSymbol("list->vector"),ScmPair((expand_quasiquote_macro (list_to_proper_list x)), ScmNil)) 
 | ScmPair(ScmPair(ScmSymbol("unquote-splicing"), ScmPair(sexpr,ScmNil)), b) -> ScmPair(ScmSymbol("append"), ScmPair(sexpr, ScmPair((expand_quasiquote_macro b,ScmNil))))
 | ScmPair(a, ScmNil) -> ScmPair(ScmSymbol("cons"), ScmPair((expand_quasiquote_macro a),ScmPair((expand_quasiquote_macro ScmNil),ScmNil)))
