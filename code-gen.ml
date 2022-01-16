@@ -122,9 +122,8 @@ module Code_Gen : CODE_GEN = struct
     | [ScmPair(car, cdr), num] -> [ScmPair(car, cdr), (num, "MAKE_LITERAL_PAIR(const_tbl+" ^ (Int.to_string (find_offset car init)) ^ ", const_tbl+" ^ (Int.to_string (find_offset cdr init)) ^ ")")]
     | [ScmSymbol(x), num] -> [ScmSymbol(x), (num, "MAKE_LITERAL_SYMBOL(const_tbl+" ^ (Int.to_string (find_offset (ScmString(x)) init)) ^ ")")]
     | [ScmVector([]), num] -> [ScmVector([]), (num, "MAKE_LITERAL_VECTOR")]
-    | [ScmVector(list), num] ->  let str = (List.fold_left (fun initstr ex -> initstr ^ "const_tbl+" ^ (Int.to_string (find_offset ex init)) ^ ", ") "" list) in 
-                                        let str = (String.sub str 0 ((String.length str) - 2)) in
-                                          [ScmVector(list), (num, "MAKE_LITERAL_VECTOR " ^ str)]
+    | [ScmVector(list), num] ->  let str = (List.fold_left (fun initstr ex -> initstr ^ ", const_tbl+" ^ (Int.to_string (find_offset ex init))) (Int.to_string (List.length list)) list) in 
+                                [ScmVector(list), (num, "MAKE_LITERAL_VECTOR " ^ str)]
     | _ -> raise X_not_yet_implemented;;
     
   let rec last_element = function

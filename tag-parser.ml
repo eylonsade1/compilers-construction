@@ -215,6 +215,7 @@ match sexpr with
 | ScmPair(ScmSymbol("begin"), seqBody) -> (tag_parse_begin seqBody) 
 (*| ScmPair(ScmPair(ScmSymbol("lambda"), body), argVal) -> ScmApplic((tag_parse_expression (ScmPair(ScmSymbol("lambda"), body)), (List.map tag_parse_expression (scm_list_to_list argVal))))*)
 | ScmPair(funcName, rest) -> ScmApplic((tag_parse_expression funcName),(List.map tag_parse_expression (scm_list_to_list rest))) (*check parse func name *)
+(* | ScmVector(lst) -> ScmConst(ScmVector(lst)) *)
 | _ -> raise (X_syntax_error (sexpr, "Sexpr structure not recognized- main parse"))
 
 and tag_parse_set = function
