@@ -32,8 +32,14 @@
         (fun (car lst) (fold-right fun init (cdr lst))))))
 
 (define cons*
- (lambda lst
-   (fold-right cons '() lst)))
+ (lambda (x . y)
+   (if (eq? y '())
+       x
+   (if (eq? (car y) '())
+       x
+       (if (pair? (car y))
+              (cons x (cons* (car (car y)) (cdr (car y))))
+              (cons x (cons* (car y) (cdr y))))))))
    
 (define append
   (let ((null? null?)
