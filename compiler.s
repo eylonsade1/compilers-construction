@@ -298,7 +298,7 @@
 	sub rax, 8			; rax = arg under the magic
 	mov rdx, rbp		
 	add rdx, 24			; rdx = num of args (stop pointer for loop)
-	mov rbx, SOB_NIL_ADDRESS
+	MAKE_PAIR(rbx, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
 	%%MAKE_LIST_LOOP:
 	cmp rdx,rax			; while (rax != pointer to num of args)
 	je %%END_MAKE_LIST_LOOP
