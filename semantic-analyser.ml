@@ -218,7 +218,8 @@ module Semantic_Analysis : SEMANTIC_ANALYSIS = struct
      | ScmLambdaOpt'(stringList, str, expr') -> if (List.mem name (str::stringList)) then expr else ScmLambdaOpt'(stringList, str, (runCheck expr'))
      | ScmApplic'(expr', exprList) -> ScmApplic'((runCheck expr'), (List.map (fun exp -> (runCheck exp)) exprList)) 
      | ScmApplicTP'(expr', exprList) -> ScmApplicTP'((runCheck expr'), (List.map (fun exp -> (runCheck exp)) exprList))
-     | exp -> exp) in
+     | ScmBoxSet'(var, exp) -> ScmBoxSet'(var, (runCheck exp))
+     | ex -> ex) in
    runCheck;;
 
   let shouldBox env name body = 
