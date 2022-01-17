@@ -323,7 +323,7 @@ let generate_lambda_opt stringList num_of_lambda body =
     | ScmVar'(VarFree(var)) -> (get_Fvar var fvars)
     | ScmVar'(VarParam(_, minor)) -> "mov rax, qword [rbp+"^(Int.to_string ((4+minor)*8))^"]\n"
     | ScmVar'(VarBound(_, major, minor)) -> (get_bound_var (Int.to_string minor) (Int.to_string major))
-    | ScmBox'(var) -> "MALLOC rax, 8\n" (* check *)
+    | ScmBox'(var) -> "push rbx\nMALLOC rbx, 8\n"^(generate_helper consts fvars lambda_counter (ScmVar'(var)))^"mov qword [rbx], rax\nmov rax, rbx\npop rbx\n" (* check *)
     | ScmBoxGet'(var) -> (generate_helper consts fvars lambda_counter (ScmVar'(var))) ^ "mov rax, qword [rax]\n"
     | ScmBoxSet'(var, expr) -> (generate_box_set (generate_helper consts fvars lambda_counter expr) (generate_helper consts fvars lambda_counter (ScmVar'(var))))
     | ScmIf'(test, dit, dif) -> (generate_if (generate_helper consts fvars lambda_counter test) (generate_helper consts fvars lambda_counter dit) (generate_helper consts fvars lambda_counter dif))
